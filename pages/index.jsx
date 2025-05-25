@@ -104,9 +104,9 @@ export default function PortfolioHome() {
             <span className="text-black">مرئيات</span>
             <span className="text-black">عمر</span>
           </h1>
-        <ul className="flex-1 flex flex-wrap justify-end gap-6 text-sm md:text-base">
+        <ul className="flex-1 flex flex-wrap justify-end gap-6 text-sm md:text-base text-black">
           {navItems.map((item) => (
-            <li key={item} className="cursor-pointer hover:text-blue-600 transition-colors">
+            <li key={item} className="cursor-pointer text-black hover:text-blue-600 transition-colors">
               {item}
             </li>
           ))}
