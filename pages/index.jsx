@@ -96,7 +96,7 @@ function ScrollStrip({ title }) {
 
 export default function PortfolioHome() {
   return (
-    <div dir="rtl" className="font-[Beiruti] text-black">
+    <div dir="rtl" className="font-[Beiruti] text-black bg-white min-h-screen px-4 md:px-8 lg:px-14 py-6">
       <ScrollbarStyles />
       {/* Navbar */}
       <nav className="py-5 flex flex-wrap justify-between items-center gap-4">
