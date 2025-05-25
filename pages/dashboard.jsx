@@ -1,96 +1,99 @@
-// pages/dashboard.jsx
-import { useState, useEffect, useRef } from 'react';
+// File: pages/dashboard.jsx
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import {
-  initializeApp
-} from 'firebase/app';
+
+// Firebase SDK imports
+import { initializeApp } from 'firebase/app';
 import {
   getAuth,
-  signInWithEmailAndPassword,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytesResumable,
-  getDownloadURL
-} from 'firebase/storage';
 import {
   getFirestore,
   collection,
   addDoc,
   serverTimestamp
 } from 'firebase/firestore';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytesResumable,
+  getDownloadURL
+} from 'firebase/storage';
 
-// 1️⃣ Firebase config: عوّض القيم بقيم مشروعك
+// ─── 1) Firebase Configuration ───────────────────────────────────────────────
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBCK0nvchDA90-IOhTTS2VhVoRlrZPqbU",
+  authDomain: "my-portfolio-af99f.firebaseapp.com",
+  projectId: "my-portfolio-af99f",
+  storageBucket: "my-portfolio-af99f.appspot.com",
+  messagingSenderId: "1063982898136",
+  appId: "1:1063982898136:web:273273bc1611b578a3b0ad",
+  measurementId: "G-HZLL1YZW98" // اختياري
 };
 
-// 2️⃣ Initialization
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// ─── 2) Initialize Firebase services ─────────────────────────────────────────
+const app     = initializeApp(firebaseConfig);
+const auth    = getAuth(app);
+const db      = getFirestore(app);
 const storage = getStorage(app);
 
+// ─── 3) Dashboard Component ─────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
 
-  // 3️⃣ States
-  const [user, setUser] = useState(null);
-  const [email, setEmail] = useState('');
+  // ─ State hooks
+  const [user, setUser]         = useState(null);
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError]       = useState('');
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
 
-  const fileInputRef = useRef();
+  const fileInputRef = useRef(null);
 
-  // 4️⃣ Auth listener
+  // ─ Listen authentication state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, currentUser => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        setUser(null);
-      }
+      setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
 
-  // 5️⃣ Handlers
-  const handleLogin = async (e) => {
+  // ─ Handle login form submit
+  const handleLogin = async e => {
     e.preventDefault();
     setError('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      setError('فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.');
+    } catch {
+      setError('خطأ في البريد أو كلمة المرور.');
     }
   };
 
-  const handleLogout = () => {
-    signOut(auth).then(() => {
-      router.push('/');
-    });
+  // ─ Handle logout
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/');
   };
 
+  // ─ Handle file upload
   const handleUpload = async () => {
     const files = Array.from(fileInputRef.current.files || []);
-    if (files.length === 0) return;
+    if (!files.length) return;
     setUploading(true);
+
     for (let file of files) {
       const path = `portfolio/${Date.now()}_${file.name}`;
-      const ref = storageRef(storage, path);
+      const ref  = storageRef(storage, path);
       const task = uploadBytesResumable(ref, file);
-      task.on('state_changed',
+
+      task.on(
+        'state_changed',
         null,
-        (err) => console.error(err),
+        console.error,
         async () => {
           const url = await getDownloadURL(ref);
           await addDoc(collection(db, 'portfolioImages'), {
@@ -100,41 +103,37 @@ export default function DashboardPage() {
         }
       );
     }
-    // بعد الانتهاء
+
     fileInputRef.current.value = null;
     setUploading(false);
   };
 
-  // 6️⃣ إذا غير مسجّل فيرجع يصير Login
+  // ─ If user is not logged in, show login form
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <form
           onSubmit={handleLogin}
-          className="w-full max-w-sm bg-white p-6 rounded-lg shadow"
+          className="w-full max-w-sm bg-white p-6 rounded shadow-md"
         >
-          <h2 className="text-2xl font-bold mb-4 text-center">تسجيل الدخول</h2>
-          {error && <p className="text-red-500 mb-2">{error}</p>}
-          <label className="block mb-2">
-            <span className="text-sm">البريد الإلكتروني</span>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="mt-1 w-full px-3 py-2 border rounded"
-            />
-          </label>
-          <label className="block mb-4">
-            <span className="text-sm">كلمة المرور</span>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="mt-1 w-full px-3 py-2 border rounded"
-            />
-          </label>
+          <h2 className="text-2xl font-bold mb-4 text-center">تسجيل دخول</h2>
+          {error && <p className="text-red-500 mb-3">{error}</p>}
+          <input
+            type="email"
+            placeholder="البريد الإلكتروني"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            className="w-full mb-3 px-3 py-2 border rounded"
+          />
+          <input
+            type="password"
+            placeholder="كلمة المرور"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            className="w-full mb-4 px-3 py-2 border rounded"
+          />
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
@@ -146,9 +145,9 @@ export default function DashboardPage() {
     );
   }
 
-  // 7️⃣ Dashboard بعد تسجيل الدخول
+  // ─ Dashboard UI after login
   return (
-    <div className="min-h-screen bg-white p-6 lg:p-12">
+    <div dir="rtl" className="min-h-screen bg-white p-6 lg:p-12">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">لوحة تحكّم البورتفوليو</h1>
         <button
@@ -180,18 +179,13 @@ export default function DashboardPage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-4">توجيه المستخدمين</h2>
-        <p>
-          لعرض البورتفوليو، افتح&nbsp;
-          <a
-            href="/"
-            className="text-blue-600 hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            الصفحة الرئيسية
-          </a>
-        </p>
+        <h2 className="text-xl font-semibold mb-4">عرض البورتفوليو</h2>
+        <a
+          href="/"
+          className="text-blue-600 hover:underline"
+        >
+          اذهب إلى الصفحة الرئيسية
+        </a>
       </div>
     </div>
   );
