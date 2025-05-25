@@ -100,9 +100,10 @@ export default function PortfolioHome() {
       <ScrollbarStyles />
       {/* Navbar */}
       <nav className="py-5 flex flex-wrap justify-between items-center gap-4">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-        <span className="text-gray-500">مرئيات</span> <span className="text-black">عمر</span>
-      </h1>
+        <h1 className="flex flex-col text-3xl md:text-4xl font-extrabold leading-tight text-right">
+            <span className="text-gray-500">مرئيات</span>
+            <span className="text-black">عمر</span>
+          </h1>
         <ul className="flex-1 flex flex-wrap justify-end gap-6 text-sm md:text-base">
           {navItems.map((item) => (
             <li key={item} className="cursor-pointer hover:text-blue-600 transition-colors">
