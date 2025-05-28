@@ -1,192 +1,251 @@
 // File: pages/dashboard.jsx
+import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { FiUpload, FiFile, FiTrash2, FiImage, FiCheckSquare, FiSquare } from 'react-icons/fi';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/router';
-
-// Firebase SDK imports
-import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut
-} from 'firebase/auth';
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  serverTimestamp
-} from 'firebase/firestore';
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytesResumable,
-  getDownloadURL
-} from 'firebase/storage';
-
-// ─── 1) Firebase Configuration ───────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyBCK0nvchDA90-IOhTTS2VhVoRlrZPqbU",
-  authDomain: "my-portfolio-af99f.firebaseapp.com",
-  projectId: "my-portfolio-af99f",
-  storageBucket: "my-portfolio-af99f.appspot.com",
-  messagingSenderId: "1063982898136",
-  appId: "1:1063982898136:web:273273bc1611b578a3b0ad",
-  measurementId: "G-HZLL1YZW98" // اختياري
-};
-
-// ─── 2) Initialize Firebase services ─────────────────────────────────────────
-const app     = initializeApp(firebaseConfig);
-const auth    = getAuth(app);
-const db      = getFirestore(app);
-const storage = getStorage(app);
-
-// ─── 3) Dashboard Component ─────────────────────────────────────────────────
-export default function DashboardPage() {
-  const router = useRouter();
-
-  // ─ State hooks
-  const [user, setUser]         = useState(null);
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
+export default function Dashboard() {
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [images, setImages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(true);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [showModal, setShowModal] = useState(false);
+  const [deleteIds, setDeleteIds] = useState(new Set());
+  const inputRef = useRef();
 
-  const fileInputRef = useRef(null);
-
-  // ─ Listen authentication state
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, currentUser => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // ─ Handle login form submit
-  const handleLogin = async e => {
-    e.preventDefault();
-    setError('');
+  const fetchImages = async () => {
+    setLoadingImages(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const res = await fetch('/api/images');
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setImages(Array.isArray(data) ? data : []);
+      setSelected(new Set());
+      setSelectMode(false);
     } catch {
-      setError('خطأ في البريد أو كلمة المرور.');
+      setImages([]);
+    } finally {
+      setLoadingImages(false);
     }
   };
 
-  // ─ Handle logout
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
+  useEffect(() => { fetchImages(); }, []);
+
+  const handleSelectFiles = e => {
+    const sel = Array.from(e.target.files || []);
+    setFiles(sel);
+    setPreviews(sel.map(f => URL.createObjectURL(f)));
+    setStatus('');
   };
 
-  // ─ Handle file upload
   const handleUpload = async () => {
-    const files = Array.from(fileInputRef.current.files || []);
-    if (!files.length) return;
-    setUploading(true);
-
-    for (let file of files) {
-      const path = `portfolio/${Date.now()}_${file.name}`;
-      const ref  = storageRef(storage, path);
-      const task = uploadBytesResumable(ref, file);
-
-      task.on(
-        'state_changed',
-        null,
-        console.error,
-        async () => {
-          const url = await getDownloadURL(ref);
-          await addDoc(collection(db, 'portfolioImages'), {
-            url,
-            timestamp: serverTimestamp()
-          });
-        }
-      );
+    if (!files.length) {
+      setStatus('❗ اختر صورة واحدة على الأقل');
+      return;
     }
-
-    fileInputRef.current.value = null;
-    setUploading(false);
+    setUploading(true);
+    try {
+      for (let f of files) {
+        const fm = new FormData();
+        fm.append('file', f);
+        const res = await fetch('/api/upload', { method: 'POST', body: fm });
+        if (!res.ok) throw new Error();
+      }
+      setStatus('✅ تم رفع الصور بنجاح');
+      setFiles([]);
+      setPreviews([]);
+      inputRef.current.value = null;
+      await fetchImages();
+    } catch {
+      setStatus('❌ حدث خطأ أثناء الرفع');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  // ─ If user is not logged in, show login form
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <form
-          onSubmit={handleLogin}
-          className="w-full max-w-sm bg-white p-6 rounded shadow-md"
-        >
-          <h2 className="text-2xl font-bold mb-4 text-center">تسجيل دخول</h2>
-          {error && <p className="text-red-500 mb-3">{error}</p>}
-          <input
-            type="email"
-            placeholder="البريد الإلكتروني"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className="w-full mb-3 px-3 py-2 border rounded"
-          />
-          <input
-            type="password"
-            placeholder="كلمة المرور"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="w-full mb-4 px-3 py-2 border rounded"
-          />
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-          >
-            دخول
-          </button>
-        </form>
-      </div>
-    );
-  }
+  // Prepare single or bulk delete
+  const confirmDelete = ids => {
+    setDeleteIds(new Set(ids));
+    setShowModal(true);
+  };
 
-  // ─ Dashboard UI after login
+  const deleteConfirmed = async () => {
+    for (let id of deleteIds) {
+      await fetch(`/api/images?id=${id}`, { method: 'DELETE' });
+    }
+    setStatus(`🗑️ تم حذف ${deleteIds.size} صورة`);
+    setShowModal(false);
+    setDeleteIds(new Set());
+    await fetchImages();
+  };
+
+  const toggleSelect = id => {
+    const newSet = new Set(selected);
+    newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+    setSelected(newSet);
+  };
+
   return (
-    <div dir="rtl" className="min-h-screen bg-white p-6 lg:p-12">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">لوحة تحكّم البورتفوليو</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+    <div className="relative font-[Beiruti] bg-white min-h-screen p-10">
+      <h1 className="text-5xl font-bold text-center text-gray-800 mb-8">لوحة التحكم</h1>
+      <div className="flex flex-col lg:flex-row gap-10">
+
+        {/* Stored Images Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="flex-1 bg-white shadow-xl rounded-2xl p-8 border border-gray-200"
         >
-          خروج
-        </button>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="flex items-center text-2xl font-semibold text-gray-700">
+              <FiImage className="mr-2" /> الصور المخزنة
+            </h2>
+            <button
+              onClick={() => setSelectMode(!selectMode)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition cursor-pointer"
+            >
+              {selectMode ? 'إلغاء التحديد' : 'تحديد'}
+            </button>
+          </div>
+
+          {loadingImages ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="w-full aspect-square bg-gray-100 rounded-lg"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                />
+              ))}
+            </div>
+          ) : images.length === 0 ? (
+            <p className="text-gray-500 text-center">لا توجد صور حتى الآن.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {images.map(({ id, src }) => {
+                const isSelected = selected.has(id);
+                return (
+                  <motion.div
+                    key={id}
+                    whileHover={{ scale: 1.03 }}
+                    className={`relative bg-gray-50 rounded-lg overflow-hidden shadow-sm aspect-square cursor-pointer transition-shadow ${selectMode ? 'ring-2 ring-indigo-300' : ''} ${isSelected ? 'ring-4 ring-indigo-500' : ''}`}
+                    onClick={() => selectMode && toggleSelect(id)}
+                  >
+                    <img src={src} alt="uploaded" className="w-full h-full object-cover" />
+                    {selectMode && (
+                      <div className="absolute top-2 left-2 text-white">
+                        {isSelected ? <FiCheckSquare /> : <FiSquare />}
+                      </div>
+                    )}
+                    {!selectMode && (
+                      <button
+                        onClick={() => confirmDelete([id])}
+                        className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition cursor-pointer"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Bulk delete button */}
+          {selectMode && selected.size > 0 && (
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => confirmDelete(Array.from(selected))}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition cursor-pointer"
+              >حذف المحدد</button>
+            </div>
+          )}
+        </motion.section>
+
+        {/* Upload Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="flex-1 bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-200"
+        >
+          <h2 className="flex items-center text-2xl font-semibold text-gray-700">
+            <FiUpload className="mr-2" /> رفع الصور الجديدة
+          </h2>
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <label className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-shadow cursor-pointer">
+              <FiFile className="text-gray-600 text-xl mr-2" />
+              <span className="text-gray-800">اختر ملفات</span>
+              <input
+                type="file"
+                ref={inputRef}
+                accept="image/*"
+                multiple
+                onChange={handleSelectFiles}
+                className="hidden"
+              />
+            </label>
+            <button
+              onClick={handleUpload}
+              disabled={!files.length || uploading}
+              className={`${!files.length || uploading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} aspect-square w-16 flex items-center justify-center text-white rounded-lg transition cursor-pointer`}
+            >
+              {uploading ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1 }}
+                  className="w-5 h-5 border-4 border-white border-t-transparent rounded-full"
+                />
+              ) : (
+                <FiUpload className="text-xl" />
+              )}
+            </button>
+          </div>
+
+          {previews.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
+              {previews.map((src, i) => (
+                <motion.div
+                  key={i}
+                  whileHover={{ scale: 1.05 }}
+                  className="relative bg-gray-50 rounded-lg overflow-hidden shadow-sm transition-shadow aspect-square cursor-pointer"
+                >
+                  <img src={src} className="w-full h-full object-cover" alt="preview" />
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {status && (
+            <p className="mt-4 text-center text-sm text-gray-600">{status}</p>
+          )}
+        </motion.div>
       </div>
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">رفع الصور</h2>
-        <input
-          type="file"
-          ref={fileInputRef}
-          multiple
-          accept="image/*"
-          className="block mb-3"
-        />
-        <button
-          onClick={handleUpload}
-          disabled={uploading}
-          className={`px-4 py-2 rounded text-white ${
-            uploading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
-          }`}
-        >
-          {uploading ? 'جاري الرفع...' : 'رفع الصور'}
-        </button>
-      </div>
-
-      <div>
-        <h2 className="text-xl font-semibold mb-4">عرض البورتفوليو</h2>
-        <a
-          href="/"
-          className="text-blue-600 hover:underline"
-        >
-          اذهب إلى الصفحة الرئيسية
-        </a>
-      </div>
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-80 text-right shadow-2xl">
+            <h3 className="text-xl font-semibold mb-3 text-gray-800">تأكيد الحذف</h3>
+            <p className="mb-5 text-gray-700">هل تريد حذف الصور المحددة بالفعل؟</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowModal(false); setDeleteIds(new Set()); }}
+                className="px-3 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-gray-800"
+              >إلغاء</button>
+              <button
+                onClick={deleteConfirmed}
+                className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
+              >حذف</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
