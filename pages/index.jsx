@@ -40,12 +40,13 @@ function Spinner() {
 }
 
 // ————————————————————————————
-// ScrollStrip مع دعم السحب/التمرير والشكل التعريفي (Skeleton)
+// شريط قابل للسحب مع Skeleton
 function ScrollStrip({ title, items, loading }) {
   const wrap       = useRef(null);
   const isDragging = useRef(false);
   const startX     = useRef(0);
   const startScroll= useRef(0);
+  const skeletonCount = 6;
 
   const startDrag = pageX => {
     isDragging.current    = true;
@@ -86,13 +87,9 @@ function ScrollStrip({ title, items, loading }) {
   const onTouchMove  = e => { e.preventDefault(); moveDrag(e.touches[0].pageX); };
   const onTouchEnd   = () => endDrag();
 
-  // عدد العناصر الافتراضية للسكلتون
-  const skeletonCount = 6;
-
   return (
     <section className="select-none">
       <h2 className="mb-3 text-lg md:text-xl font-semibold">{title}</h2>
-
       {loading ? (
         <div className="flex gap-4 overflow-x-auto">
           {Array.from({ length: skeletonCount }).map((_, i) => (
@@ -135,6 +132,15 @@ function ScrollStrip({ title, items, loading }) {
 }
 
 export default function PortfolioHome() {
+  // —————— قسم أقسام مهاراتي ——————
+  const [skills, setSkills] = useState([
+    { id: 1, src: '/images/skill-design.png' },     // تصميم جرافيكي
+    { id: 2, src: '/images/skill-uiux.png' },       // UI/UX
+    { id: 3, src: '/images/skill-marketing.png' },  // تسويق
+  ]);
+  const [loadingSkills, setLoadingSkills] = useState(false);
+
+  // —————— قسم شعارات بنيتها ——————
   const [logos, setLogos]          = useState([]);
   const [loadingLogos, setLoading] = useState(true);
 
@@ -142,16 +148,11 @@ export default function PortfolioHome() {
     async function fetchLogos() {
       try {
         const res = await fetch('/api/images');
-        if (!res.ok) {
-          const text = await res.text();
-          console.error('❌ /api/images returned non-JSON:', text);
-          setLogos([]);
-        } else {
-          const data = await res.json();
-          setLogos(Array.isArray(data) ? data : []);
-        }
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        setLogos(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('❌ Error fetching images:', err);
+        console.error(err);
         setLogos([]);
       } finally {
         setLoading(false);
@@ -167,23 +168,17 @@ export default function PortfolioHome() {
     >
       <ScrollbarStyles />
 
-      {/* ====== Navbar ====== */}
       <nav className="py-5 flex justify-between items-center">
-        {/* ضع هنا عناصر النافبار حسب تصميمك */}
+        {/* عناصر النافبار */}
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* ====== Sidebar ====== */}
         <aside className="space-y-8 lg:col-span-1">
-          {/* ضع هنا محتوى السايدبار حسب تصميمك */}
+          {/* محتوى السايدبار */}
         </aside>
 
-        {/* ====== Main Content ====== */}
         <main className="lg:col-span-3 space-y-14">
-          {/* شريط أقسام المهارات (قدّم بيانات ثابتة أو ديناميكية) */}
-          <ScrollStrip title="اقسام مهاراتي" items={[]} loading={false} />
-
-          {/* شريط شعارات بنيتها من MongoDB */}
+          <ScrollStrip title="اقسام مهاراتي" items={skills} loading={loadingSkills} />
           <ScrollStrip title="شعارات بنيتها" items={logos} loading={loadingLogos} />
         </main>
       </div>

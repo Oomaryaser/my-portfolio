@@ -1,251 +1,489 @@
 // File: pages/dashboard.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FiUpload, FiFile, FiTrash2, FiImage, FiCheckSquare, FiSquare } from 'react-icons/fi';
+import {
+  FiUpload,
+  FiFile,
+  FiTrash2,
+  FiPlus,
+  FiEdit,
+  FiX,
+  FiCheck,
+  FiSquare,
+  FiCheckSquare
+} from 'react-icons/fi';
 
 export default function Dashboard() {
+  const [activeSection, setActiveSection] = useState('categories');
+
+  // — بيانات الأقسام —
+  const [categories, setCategories] = useState([]);
+  const [loadingCats, setLoadingCats] = useState(true);
+  const [newName, setNewName] = useState('');
+  const [newCover, setNewCover] = useState(null);
+  const [newCoverPreview, setNewCoverPreview] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editCover, setEditCover] = useState(null);
+  const [editCoverPreview, setEditCoverPreview] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // — بيانات رفع الصور —
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
-  const [status, setStatus] = useState('');
+  const [categoryForUpload, setCategoryForUpload] = useState('skills');
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState([]);
-  const [loadingImages, setLoadingImages] = useState(true);
+  const [loadingImgs, setLoadingImgs] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [showModal, setShowModal] = useState(false);
   const [deleteIds, setDeleteIds] = useState(new Set());
   const inputRef = useRef();
+  const [status, setStatus] = useState('');
 
-  const fetchImages = async () => {
-    setLoadingImages(true);
+  // جلب البيانات
+  const fetchCats = async () => {
+    setLoadingCats(true);
     try {
-      const res = await fetch('/api/images');
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setImages(Array.isArray(data) ? data : []);
-      setSelected(new Set());
-      setSelectMode(false);
+      const res = await fetch('/api/categories');
+      setCategories(await res.json());
+    } catch {
+      setCategories([]);
+    } finally {
+      setLoadingCats(false);
+    }
+  };
+
+  const fetchImgs = async () => {
+    setLoadingImgs(true);
+    try {
+      const res = await fetch(`/api/images?category=${categoryForUpload}`);
+      setImages(await res.json());
     } catch {
       setImages([]);
     } finally {
-      setLoadingImages(false);
+      setLoadingImgs(false);
+      setSelected(new Set());
+      setSelectMode(false);
     }
   };
 
-  useEffect(() => { fetchImages(); }, []);
+  useEffect(() => {
+    fetchCats();
+    fetchImgs();
+  }, [categoryForUpload]);
 
-  const handleSelectFiles = e => {
-    const sel = Array.from(e.target.files || []);
-    setFiles(sel);
-    setPreviews(sel.map(f => URL.createObjectURL(f)));
-    setStatus('');
+  // —— دوال الأقسام ——
+  const handleNewCover = e => {
+    const f = e.target.files[0];
+    setNewCover(f);
+    setNewCoverPreview(URL.createObjectURL(f));
+  };
+  const createCat = async () => {
+    if (!newName.trim()) return setStatus('❗ أدخل اسم القسم');
+    setCreating(true);
+    try {
+      const fm = new FormData();
+      fm.append('name', newName.trim());
+      if (newCover) fm.append('cover', newCover);
+      await fetch('/api/categories', { method: 'POST', body: fm });
+      setStatus('✅ تم إنشاء القسم');
+      setNewName(''); setNewCover(null); setNewCoverPreview('');
+      fetchCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الإنشاء');
+    } finally {
+      setCreating(false);
+    }
+  };
+  const startEdit = c => {
+    setEditId(c.id);
+    setEditName(c.name);
+    setEditCoverPreview(c.cover);
+  };
+  const handleEditCover = e => {
+    const f = e.target.files[0];
+    setEditCover(f);
+    setEditCoverPreview(URL.createObjectURL(f));
+  };
+  const saveEdit = async () => {
+    if (!editName.trim()) return setStatus('❗ أدخل اسم القسم');
+    setSaving(true);
+    try {
+      const fm = new FormData();
+      fm.append('name', editName.trim());
+      if (editCover) fm.append('cover', editCover);
+      await fetch(`/api/categories/${editId}`, { method: 'PUT', body: fm });
+      setStatus('✅ تم حفظ التعديل');
+      setEditId(null);
+      fetchCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الحفظ');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const cancelEdit = () => {
+    setEditId(null);
+    setEditName(''); setEditCover(null); setEditCoverPreview('');
+  };
+  const deleteCat = async id => {
+    if (!confirm('تأكيد حذف القسم؟')) return;
+    try {
+      await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      setStatus('🗑️ تم حذف القسم');
+      fetchCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الحذف');
+    }
   };
 
-  const handleUpload = async () => {
-    if (!files.length) {
-      setStatus('❗ اختر صورة واحدة على الأقل');
-      return;
-    }
+  // —— دوال رفع الصور ——
+  const handleSelect = e => {
+    const arr = Array.from(e.target.files);
+    setFiles(arr);
+    setPreviews(arr.map(f => URL.createObjectURL(f)));
+  };
+  const uploadFiles = async () => {
+    if (!files.length) return setStatus('❗ اختر صورة');
     setUploading(true);
     try {
       for (let f of files) {
         const fm = new FormData();
         fm.append('file', f);
-        const res = await fetch('/api/upload', { method: 'POST', body: fm });
-        if (!res.ok) throw new Error();
+        fm.append('category', categoryForUpload);
+        await fetch('/api/upload', { method: 'POST', body: fm });
       }
-      setStatus('✅ تم رفع الصور بنجاح');
-      setFiles([]);
-      setPreviews([]);
+      setStatus('✅ تم رفع الصور');
+      setFiles([]); setPreviews([]);
       inputRef.current.value = null;
-      await fetchImages();
+      fetchImgs();
     } catch {
-      setStatus('❌ حدث خطأ أثناء الرفع');
+      setStatus('❌ خطأ أثناء الرفع');
     } finally {
       setUploading(false);
     }
   };
-
-  // Prepare single or bulk delete
-  const confirmDelete = ids => {
+  const toggleSel = id => {
+    const s = new Set(selected);
+    if (s.has(id)) s.delete(id);
+    else s.add(id);
+    setSelected(s);
+  };
+  // دالة لتحديد/إلغاء تحديد كل الصور
+  const selectAll = () => {
+    if (selected.size === images.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(images.map(img => img.id)));
+    }
+    setSelectMode(true);
+  };
+  const confirmDel = ids => {
     setDeleteIds(new Set(ids));
     setShowModal(true);
   };
-
-  const deleteConfirmed = async () => {
+  const doDelete = async () => {
     for (let id of deleteIds) {
       await fetch(`/api/images?id=${id}`, { method: 'DELETE' });
     }
-    setStatus(`🗑️ تم حذف ${deleteIds.size} صورة`);
+    setStatus(`🗑️ حذف ${deleteIds.size}`);
     setShowModal(false);
-    setDeleteIds(new Set());
-    await fetchImages();
-  };
-
-  const toggleSelect = id => {
-    const newSet = new Set(selected);
-    newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-    setSelected(newSet);
+    fetchImgs();
   };
 
   return (
-    <div className="relative font-[Beiruti] bg-white min-h-screen p-10">
-      <h1 className="text-5xl font-bold text-center text-gray-800 mb-8">لوحة التحكم</h1>
-      <div className="flex flex-col lg:flex-row gap-10">
-
-        {/* Stored Images Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex-1 bg-white shadow-xl rounded-2xl p-8 border border-gray-200"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="flex items-center text-2xl font-semibold text-gray-700">
-              <FiImage className="mr-2" /> الصور المخزنة
-            </h2>
+    <div className="flex min-h-screen bg-gray-900 text-gray-100 font-[Beiruti]">
+      {/* القائمة الجانبية */}
+      <aside className="w-64 bg-gray-800 p-6 shadow-lg">
+        <h2 className="text-2xl font-bold mb-6 text-center">القائمة</h2>
+        <ul className="space-y-4">
+          <li>
             <button
-              onClick={() => setSelectMode(!selectMode)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition cursor-pointer"
+              onClick={() => setActiveSection('categories')}
+              className={`w-full text-right px-4 py-2 rounded-lg transition duration-200 ${
+                activeSection === 'categories'
+                  ? 'bg-indigo-600 text-white shadow-xl'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
             >
-              {selectMode ? 'إلغاء التحديد' : 'تحديد'}
+              أقسام مهاراتي
             </button>
-          </div>
-
-          {loadingImages ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="w-full aspect-square bg-gray-100 rounded-lg"
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                />
-              ))}
-            </div>
-          ) : images.length === 0 ? (
-            <p className="text-gray-500 text-center">لا توجد صور حتى الآن.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {images.map(({ id, src }) => {
-                const isSelected = selected.has(id);
-                return (
-                  <motion.div
-                    key={id}
-                    whileHover={{ scale: 1.03 }}
-                    className={`relative bg-gray-50 rounded-lg overflow-hidden shadow-sm aspect-square cursor-pointer transition-shadow ${selectMode ? 'ring-2 ring-indigo-300' : ''} ${isSelected ? 'ring-4 ring-indigo-500' : ''}`}
-                    onClick={() => selectMode && toggleSelect(id)}
-                  >
-                    <img src={src} alt="uploaded" className="w-full h-full object-cover" />
-                    {selectMode && (
-                      <div className="absolute top-2 left-2 text-white">
-                        {isSelected ? <FiCheckSquare /> : <FiSquare />}
-                      </div>
-                    )}
-                    {!selectMode && (
-                      <button
-                        onClick={() => confirmDelete([id])}
-                        className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition cursor-pointer"
-                      >
-                        <FiTrash2 />
-                      </button>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Bulk delete button */}
-          {selectMode && selected.size > 0 && (
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => confirmDelete(Array.from(selected))}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition cursor-pointer"
-              >حذف المحدد</button>
-            </div>
-          )}
-        </motion.section>
-
-        {/* Upload Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-          className="flex-1 bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-200"
-        >
-          <h2 className="flex items-center text-2xl font-semibold text-gray-700">
-            <FiUpload className="mr-2" /> رفع الصور الجديدة
-          </h2>
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <label className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-shadow cursor-pointer">
-              <FiFile className="text-gray-600 text-xl mr-2" />
-              <span className="text-gray-800">اختر ملفات</span>
-              <input
-                type="file"
-                ref={inputRef}
-                accept="image/*"
-                multiple
-                onChange={handleSelectFiles}
-                className="hidden"
-              />
-            </label>
+          </li>
+          <li>
             <button
-              onClick={handleUpload}
-              disabled={!files.length || uploading}
-              className={`${!files.length || uploading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} aspect-square w-16 flex items-center justify-center text-white rounded-lg transition cursor-pointer`}
+              onClick={() => setActiveSection('upload')}
+              className={`w-full text-right px-4 py-2 rounded-lg transition duration-200 ${
+                activeSection === 'upload'
+                  ? 'bg-indigo-600 text-white shadow-xl'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
             >
-              {uploading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1 }}
-                  className="w-5 h-5 border-4 border-white border-t-transparent rounded-full"
-                />
-              ) : (
-                <FiUpload className="text-xl" />
-              )}
+              رفع الصور
             </button>
-          </div>
+          </li>
+        </ul>
+      </aside>
 
-          {previews.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
-              {previews.map((src, i) => (
-                <motion.div
-                  key={i}
-                  whileHover={{ scale: 1.05 }}
-                  className="relative bg-gray-50 rounded-lg overflow-hidden shadow-sm transition-shadow aspect-square cursor-pointer"
+      {/* المحتوى الرئيسي */}
+      <main className="flex-1 p-10 space-y-10">
+        <h1 className="text-3xl font-bold text-center">لوحة التحكم</h1>
+
+        {/* قسم الأقسام */}
+        {activeSection === 'categories' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+            {/* إنشاء قسم جديد */}
+            <div className="bg-gray-800 shadow-xl rounded-2xl p-6 space-y-4">
+              <h2 className="text-2xl font-semibold">إنشاء قسم جديد</h2>
+              <div className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="text"
+                  placeholder="اسم القسم"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  className="bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 rounded-lg p-2 flex-1"
+                />
+                <label className="flex items-center gap-2 cursor-pointer text-gray-200">
+                  <FiFile /> غلاف
+                  <input type="file" accept="image/*" hidden onChange={handleNewCover} />
+                </label>
+                <button
+                  onClick={createCat}
+                  disabled={creating}
+                  className="bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-lg transition duration-200 shadow"
                 >
-                  <img src={src} className="w-full h-full object-cover" alt="preview" />
-                </motion.div>
-              ))}
+                  <FiPlus className="inline-block" /> إنشاء
+                </button>
+              </div>
+              {newCoverPreview && (
+                <div className="w-full" style={{ paddingTop: '100%', position: 'relative' }}>
+                  <img
+                    src={newCoverPreview}
+                    alt="cover preview"
+                    className="absolute top-0 left-0 w-full h-full object-cover rounded-lg shadow-inner"
+                  />
+                </div>
+              )}
             </div>
-          )}
 
-          {status && (
-            <p className="mt-4 text-center text-sm text-gray-600">{status}</p>
-          )}
-        </motion.div>
-      </div>
+            {/* الأقسام الحالية */}
+            <div className="bg-gray-800 shadow-xl rounded-2xl p-6 space-y-4">
+              <h2 className="text-2xl font-semibold">الأقسام الحالية</h2>
+              {loadingCats ? (
+                <div className="flex gap-4">
+                  <div className="w-32 h-32 bg-gray-700 animate-pulse rounded-lg" />
+                  <div className="w-32 h-32 bg-gray-700 animate-pulse rounded-lg" />
+                </div>
+              ) : categories.length === 0 ? (
+                <p className="text-gray-400">لا توجد أقسام.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {categories.map(c => (
+                    <div key={c.id} className="bg-gray-800 border border-gray-700 rounded-2xl p-5 relative shadow-md hover:shadow-lg transition duration-200">
+                      {editId === c.id ? (
+                        <>
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                            className="w-full mb-2 p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600"
+                          />
+                          <label className="flex items-center gap-2 mb-2 cursor-pointer text-gray-200">
+                            <FiFile /> غلاف جديد
+                            <input type="file" accept="image/*" hidden onChange={handleEditCover} />
+                          </label>
+                          {editCoverPreview && (
+                            <div className="w-full" style={{ paddingTop: '100%', position: 'relative' }}>
+                              <img
+                                src={editCoverPreview}
+                                alt="edit cover preview"
+                                className="absolute top-0 left-0 w-full h-full object-cover rounded-lg mb-2"
+                              />
+                            </div>
+                          )}
+                          <div className="flex justify-end gap-2">
+                            <button onClick={saveEdit} disabled={saving} className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded-lg text-white">
+                              حفظ
+                            </button>
+                            <button onClick={cancelEdit} className="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded-lg text-white">
+                              إلغاء
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {c.cover && (
+                            <div className="w-full" style={{ paddingTop: '100%', position: 'relative' }}>
+                              <img
+                                src={c.cover}
+                                alt={c.name}
+                                className="absolute top-0 left-0 w-full h-full object-cover rounded-lg mb-3 border-2 border-gray-700"
+                              />
+                            </div>
+                          )}
+                          <p className="font-medium mb-4 text-gray-100">{c.name}</p>
+                          <div className="flex justify-end gap-3">
+                            <button onClick={() => startEdit(c)} className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white">
+                              <FiEdit />
+                            </button>
+                            <button onClick={() => deleteCat(c.id)} className="p-2 bg-red-600 hover:bg-red-500 rounded-lg text-white">
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
 
-      {/* Confirmation Modal */}
-      {showModal && (
-        <div className="absolute inset-0 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-80 text-right shadow-2xl">
-            <h3 className="text-xl font-semibold mb-3 text-gray-800">تأكيد الحذف</h3>
-            <p className="mb-5 text-gray-700">هل تريد حذف الصور المحددة بالفعل؟</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => { setShowModal(false); setDeleteIds(new Set()); }}
-                className="px-3 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-gray-800"
-              >إلغاء</button>
-              <button
-                onClick={deleteConfirmed}
-                className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
-              >حذف</button>
+        {/* قسم رفع الصور */}
+        {activeSection === 'upload' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+            {/* رفع جديد */}
+            <div className="bg-gray-800 shadow-xl rounded-2xl p-6 space-y-4">
+              <h2 className="text-2xl font-semibold">رفع صور</h2>
+              <div className="flex items-center gap-4">
+                <label className="text-gray-200">اختر القسم:</label>
+                <select
+                  value={categoryForUpload}
+                  onChange={e => setCategoryForUpload(e.target.value)}
+                  className="bg-gray-700 text-gray-100 border border-gray-600 rounded-lg p-2"
+                >
+                  <option value="skills">أقسام مهاراتي</option>
+                  <option value="logos">شعارات بنيتها</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex-1 flex items-center justify-center gap-3 cursor-pointer bg-gray-700 border border-gray-600 rounded-lg py-3 hover:bg-gray-600">
+                  <FiFile /> اختر ملفات
+                  <input ref={inputRef} type="file" hidden multiple accept="image/*" onChange={handleSelect} />
+                </label>
+                <button
+                  onClick={uploadFiles}
+                  disabled={uploading || !files.length}
+                  className="w-16 h-16 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg flex items-center justify-center"
+                >
+                  {uploading ? <FiX className="animate-spin" /> : <FiUpload size={24} />}
+                </button>
+              </div>
+
+              {/* معاينة الصور قبل الرفع بنسبة 1:1 */}
+              {previews.length > 0 && (
+                <div className="grid grid-cols-3 gap-4">
+                  {previews.map((p, i) => (
+                    <div key={i} className="w-full" style={{ paddingTop: '100%', position: 'relative' }}>
+                      <img
+                        src={p}
+                        alt={`preview-${i}`}
+                        className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* الصور المخزنة بنسبة 1:1 */}
+            <div className="bg-gray-800 shadow-xl rounded-2xl p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold">الصور المخزنة</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectMode(!selectMode)}
+                    className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg"
+                  >
+                    {selectMode ? 'إلغاء التحديد' : 'تحديد'}
+                  </button>
+                  {selectMode && images.length > 0 && (
+                    <button
+                      onClick={selectAll}
+                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg"
+                    >
+                      {selected.size === images.length ? 'إلغاء الكل' : 'تحديد الكل'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {loadingImgs ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-32 bg-gray-700 animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : images.length === 0 ? (
+                <p className="text-gray-400">لا توجد صور.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {images.map(img => (
+                    <div key={img.id} className="relative group w-full" style={{ paddingTop: '100%' }}>
+                      <img
+                        src={img.src}
+                        alt=""
+                        className="absolute top-0 left-0 w-full h-full object-cover rounded-lg transition-transform transform group-hover:scale-105"
+                      />
+                      {selectMode ? (
+                        <button
+                          onClick={() => toggleSel(img.id)}
+                          className="absolute top-2 left-2 text-white bg-indigo-600 p-1 rounded-full"
+                        >
+                          {selected.has(img.id) ? <FiCheckSquare /> : <FiSquare />}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => confirmDel([img.id])}
+                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"
+                        >
+                          <FiTrash2 />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectMode && selected.size > 0 && (
+                <button
+                  onClick={() => confirmDel(Array.from(selected))}
+                  className="mt-4 px-5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg"
+                >
+                  حذف المحدد ({selected.size})
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* تأكيد الحذف */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+            <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl w-80 text-right space-y-4">
+              <p className="text-gray-100">هل أنت متأكد من حذف الصور المحددة؟</p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-gray-600 rounded-lg text-gray-200">
+                  إلغاء
+                </button>
+                <button onClick={doDelete} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg">
+                  حذف
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* رسالة الحالة */}
+        {status && (
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white px-6 py-3 rounded-full">
+            {status}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

@@ -7,7 +7,6 @@ const ImageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now, index: true }
 });
 
-// إنشاء الفهرس على createdAt
 ImageSchema.index({ createdAt: -1 });
 
 export default mongoose.models.Image || mongoose.model('Image', ImageSchema);
