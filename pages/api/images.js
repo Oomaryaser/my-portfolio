@@ -2,9 +2,10 @@
 import pool from '../../lib/db';
 
 export default async function handler(req, res) {
-  // GET /api/images  → إرجاع كل الصور
+  /* ————— جلب كل الصور ————— */
   if (req.method === 'GET') {
     try {
+      // لاحِظ {} بدل []
       const { rows } = await pool.query(
         'SELECT id, data, content_type FROM images ORDER BY id DESC'
       );
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // DELETE /api/images?id=123
+  /* ————— حذف صورة ————— */
   if (req.method === 'DELETE') {
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'id-required' });
