@@ -1,44 +1,40 @@
-// File: pages/api/images.js
-import dbConnect from '../../lib/db';
-import Image from '../../models/Image';
+// pages/api/images.js
+import pool from '../../lib/db';
 
 export default async function handler(req, res) {
-  await dbConnect();
-
+  // GET /api/images  → إرجاع كل الصور
   if (req.method === 'GET') {
     try {
-      // فرز على _id تنازليًا (يوازي أحدث المستندات أولًا)
-      const docs = await Image.find()
-        .sort({ _id: -1 })
-        .select('data contentType')  // نجلب فقط الحقول الضرورية
-        .lean();
+      const { rows } = await pool.query(
+        'SELECT id, data, content_type FROM images ORDER BY id DESC'
+      );
 
-      const result = docs.map(doc => ({
-        id:  doc._id,
-        src: `data:${doc.contentType};base64,${doc.data.toString('base64')}`
+      const imgs = rows.map(r => ({
+        id:  r.id,
+        src: `data:${r.content_type};base64,${r.data.toString('base64')}`
       }));
 
-      return res.status(200).json(result);
+      return res.status(200).json(imgs);
     } catch (err) {
-      console.error('Error fetching images:', err);
-      return res.status(500).json({ error: 'Failed to fetch images' });
+      console.error(err);
+      return res.status(500).json({ error: 'fetch-fail' });
     }
   }
 
+  // DELETE /api/images?id=123
   if (req.method === 'DELETE') {
     const { id } = req.query;
-    if (!id) {
-      return res.status(400).json({ error: 'Missing image id' });
-    }
+    if (!id) return res.status(400).json({ error: 'id-required' });
+
     try {
-      await Image.findByIdAndDelete(id);
-      return res.status(200).json({ message: 'Deleted successfully' });
+      await pool.query('DELETE FROM images WHERE id = $1', [id]);
+      return res.status(200).json({ ok: true });
     } catch (err) {
-      console.error('Error deleting image:', err);
-      return res.status(500).json({ error: 'Failed to delete image' });
+      console.error(err);
+      return res.status(500).json({ error: 'delete-fail' });
     }
   }
 
   res.setHeader('Allow', ['GET', 'DELETE']);
-  res.status(405).end(`Method ${req.method} Not Allowed`);
+  res.status(405).end();
 }

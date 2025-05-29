@@ -1,27 +1,26 @@
-// File: pages/api/upload.js
+// pages/api/upload.js
 import nextConnect from 'next-connect';
 import multer from 'multer';
-import dbConnect from '../../lib/db';
-import Image from '../../models/Image';
+import pool from '../../lib/db';
 
 const upload = multer({ storage: multer.memoryStorage() });
-const handler = nextConnect({
-  onError(err, req, res) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+const handler = nextConnect();
 
 handler.use(upload.single('file'));
 
 handler.post(async (req, res) => {
-  await dbConnect();
-  const { buffer, mimetype } = req.file;
-  const img = new Image({ data: buffer, contentType: mimetype });
-  await img.save();
-  res.status(201).json({ message: 'Uploaded successfully' });
+  try {
+    const { buffer, mimetype } = req.file;              // بايتات الصورة
+    const r = await pool.query(
+      'INSERT INTO images (data, content_type) VALUES ($1,$2) RETURNING id',
+      [buffer, mimetype]
+    );
+    return res.status(201).json({ id: r.rows[0].id });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'upload-fail' });
+  }
 });
 
-// حظر bodyParser الافتراضي لتمكين multer
 export const config = { api: { bodyParser: false } };
 export default handler;
