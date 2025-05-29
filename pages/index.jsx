@@ -1,102 +1,85 @@
 // File: pages/index.jsx
 import React, { useRef, useEffect, useState } from 'react';
 
-// ————————————————————————————
-// CSS عالمي لتخصيص لون شريط التمرير
+/* ——— تخصيص شريط التمرير ——— */
 const ScrollbarStyles = () => (
   <style>{`
-    .scrollbar-white::-webkit-scrollbar { height: 8px; background: #fff; }
-    .scrollbar-white::-webkit-scrollbar-thumb { background: #fff; border-radius: 4px; }
-    .scrollbar-white::-webkit-scrollbar-track { background: #fff; }
-    .scrollbar-white { scrollbar-width: thin; scrollbar-color: #fff #fff; }
+    .scrollbar-white::-webkit-scrollbar        { height: 8px; background:#fff; }
+    .scrollbar-white::-webkit-scrollbar-thumb  { background:#fff; border-radius:4px; }
+    .scrollbar-white::-webkit-scrollbar-track  { background:#fff; }
+    .scrollbar-white                          { scrollbar-width:thin; scrollbar-color:#fff #fff; }
   `}</style>
 );
 
-// ————————————————————————————
-// Spinner صغير للتحميل
+/* ——— سبينر تحميل صغير ——— */
 function Spinner() {
   return (
-    <svg
-      className="animate-spin h-5 w-5 text-gray-500"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8v8z"
-      />
+    <svg className="animate-spin h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" d="M4 12a8 8 0 018-8v8z" fill="currentColor" />
     </svg>
   );
 }
 
-// ————————————————————————————
-// شريط قابل للسحب مع Skeleton
+/* ——— شريط سحب أفقي مع Skeleton أثناء التحميل ——— */
 function ScrollStrip({ title, items, loading }) {
-  const wrap       = useRef(null);
-  const isDragging = useRef(false);
-  const startX     = useRef(0);
-  const startScroll= useRef(0);
-  const skeletonCount = 6;
+  const wrap = useRef(null);
+  const isDrag = useRef(false);
+  const startX = useRef(0);
+  const startScroll = useRef(0);
+  const skel = 6;
 
-  const startDrag = pageX => {
-    isDragging.current    = true;
-    startX.current        = pageX;
-    startScroll.current   = wrap.current.scrollLeft;
+  /* ——— دوال السحب ——— */
+  const begin = x => {
+    isDrag.current = true;
+    startX.current = x;
+    startScroll.current = wrap.current.scrollLeft;
     wrap.current.classList.add('cursor-grabbing');
     document.body.style.userSelect = 'none';
   };
-  const moveDrag = pageX => {
-    if (!isDragging.current) return;
-    const dx = pageX - startX.current;
+  const move = x => {
+    if (!isDrag.current) return;
+    const dx = x - startX.current;
     wrap.current.scrollLeft = startScroll.current - dx;
   };
-  const endDrag = () => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
+  const stop = () => {
+    if (!isDrag.current) return;
+    isDrag.current = false;
     wrap.current.classList.remove('cursor-grabbing');
     document.body.style.userSelect = '';
     window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('mouseup',   onMouseUp);
+    window.removeEventListener('mouseup', stop);
     window.removeEventListener('touchmove', onTouchMove);
-    window.removeEventListener('touchend',  onTouchEnd);
+    window.removeEventListener('touchend', stop);
   };
 
+  /* ——— أحداث الماوس ——— */
   const onMouseDown = e => {
-    startDrag(e.pageX);
+    begin(e.pageX);
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup',   onMouseUp);
+    window.addEventListener('mouseup', stop);
   };
-  const onMouseMove = e => moveDrag(e.pageX);
-  const onMouseUp   = () => endDrag();
+  const onMouseMove = e => move(e.pageX);
 
+  /* ——— أحداث اللمس ——— */
   const onTouchStart = e => {
-    startDrag(e.touches[0].pageX);
+    begin(e.touches[0].pageX);
     window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend',  onTouchEnd);
+    window.addEventListener('touchend', stop);
   };
-  const onTouchMove  = e => { e.preventDefault(); moveDrag(e.touches[0].pageX); };
-  const onTouchEnd   = () => endDrag();
+  const onTouchMove = e => {
+    e.preventDefault();
+    move(e.touches[0].pageX);
+  };
 
   return (
     <section className="select-none">
       <h2 className="mb-3 text-lg md:text-xl font-semibold">{title}</h2>
+
       {loading ? (
         <div className="flex gap-4 overflow-x-auto">
-          {Array.from({ length: skeletonCount }).map((_, i) => (
-            <div
-              key={i}
-              className="shrink-0 w-44 h-44 bg-gray-200 animate-pulse rounded-2xl"
-            />
+          {Array.from({ length: skel }).map((_, i) => (
+            <div key={i} className="shrink-0 w-44 h-44 rounded-2xl bg-gray-200 animate-pulse" />
           ))}
         </div>
       ) : (
@@ -114,11 +97,7 @@ function ScrollStrip({ title, items, loading }) {
                   key={id}
                   className="shrink-0 w-44 h-44 bg-gray-200 rounded-2xl snap-center overflow-hidden"
                 >
-                  <img
-                    src={src}
-                    alt="Portfolio"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={src} alt="" className="w-full h-full object-cover" />
                 </div>
               ))
             ) : (
@@ -131,31 +110,31 @@ function ScrollStrip({ title, items, loading }) {
   );
 }
 
+/* ——— الصفحة الرئيسية ——— */
 export default function PortfolioHome() {
-  // —————— قسم أقسام مهاراتي ——————
-  const [skills, setSkills] = useState([
-    { id: 1, src: '/images/skill-design.png' },     // تصميم جرافيكي
-    { id: 2, src: '/images/skill-uiux.png' },       // UI/UX
-    { id: 3, src: '/images/skill-marketing.png' },  // تسويق
+  /* أقسام مهاراتي (ثابتة) */
+  const [skills] = useState([
+    { id: 1, src: '/images/skill-design.png' },
+    { id: 2, src: '/images/skill-uiux.png' },
+    { id: 3, src: '/images/skill-marketing.png' }
   ]);
-  const [loadingSkills, setLoadingSkills] = useState(false);
 
-  // —————— قسم شعارات بنيتها ——————
-  const [logos, setLogos]          = useState([]);
-  const [loadingLogos, setLoading] = useState(true);
+  /* شعارات بنيتها (تُجلب من MySQL عبر /api/images) */
+  const [logos, setLogos] = useState([]);
+  const [loadingLogos, setLoadingLogos] = useState(true);
 
   useEffect(() => {
     async function fetchLogos() {
       try {
-        const res = await fetch('/api/images');
-        if (!res.ok) throw new Error('Failed to fetch');
+        const res = await fetch('/api/images');            // ← تستدعي MySQL API
+        if (!res.ok) throw new Error('failed');
         const data = await res.json();
         setLogos(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
         setLogos([]);
       } finally {
-        setLoading(false);
+        setLoadingLogos(false);
       }
     }
     fetchLogos();
@@ -168,17 +147,20 @@ export default function PortfolioHome() {
     >
       <ScrollbarStyles />
 
+      {/* — Navbar (اختياري) — */}
       <nav className="py-5 flex justify-between items-center">
         {/* عناصر النافبار */}
+        <h1 className="text-2xl font-bold">معرض أعمالي</h1>
       </nav>
 
+      {/* — المحتوى الرئيسي — */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside className="space-y-8 lg:col-span-1">
-          {/* محتوى السايدبار */}
-        </aside>
+        {/* سايدبار (اختياري) */}
+        <aside className="space-y-8 lg:col-span-1">{/* محتوى السايدبار */}</aside>
 
+        {/* المعرض */}
         <main className="lg:col-span-3 space-y-14">
-          <ScrollStrip title="اقسام مهاراتي" items={skills} loading={loadingSkills} />
+          <ScrollStrip title="اقسام مهاراتي" items={skills} loading={false} />
           <ScrollStrip title="شعارات بنيتها" items={logos} loading={loadingLogos} />
         </main>
       </div>
