@@ -6,9 +6,11 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       // لاحِظ {} بدل []
-      const { rows } = await pool.query(
-        'SELECT id, data, content_type FROM images ORDER BY id DESC'
-      );
+      const { cat } = req.query;
+      const q = cat
+        ? 'SELECT id, data, content_type FROM images WHERE category_id=$1 ORDER BY id DESC'
+        : 'SELECT id, data, content_type FROM images ORDER BY id DESC';
+      const { rows } = await pool.query(q, cat ? [cat] : []);
 
       const imgs = rows.map(r => ({
         id:  r.id,
