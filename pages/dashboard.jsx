@@ -7,7 +7,7 @@ import {
   FiTrash2,
   FiPlus,
   FiEdit,
-  FiX,
+  FiLoader,
   FiCheck,
   FiSquare,
   FiCheckSquare
@@ -32,7 +32,7 @@ export default function Dashboard() {
   /* ————————————————— بيانات رفع الصور ————————————————— */
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
-  const [categoryForUpload, setCategoryForUpload] = useState('skills'); // لا يؤثر الآن على API لكن أبقيناه للواجهة
+  const [categoryForUpload, setCategoryForUpload] = useState('');
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState([]);
   const [loadingImgs, setLoadingImgs] = useState(true);
@@ -48,7 +48,11 @@ export default function Dashboard() {
     setLoadingCats(true);
     try {
       const res = await fetch('/api/categories');
-      setCategories(await res.json());
+      const data = await res.json();
+      setCategories(data);
+      if (data.length && !categoryForUpload) {
+        setCategoryForUpload(String(data[0].id));
+      }
     } catch {
       setCategories([]);
     } finally {
@@ -162,13 +166,16 @@ export default function Dashboard() {
 
   const uploadFiles = async () => {
     if (!files.length) return setStatus('❗ اختر صورة');
+    if (!categoryForUpload) return setStatus('❗ اختر القسم');
     setUploading(true);
     try {
       for (let f of files) {
         const fm = new FormData();
         fm.append('file', f);
-        // لم نعد نرسل category
-        await fetch('/api/upload', { method: 'POST', body: fm });
+        await fetch(`/api/categories/${categoryForUpload}/images`, {
+          method: 'POST',
+          body: fm
+        });
       }
       setStatus('✅ تم رفع الصور');
       setFiles([]);
@@ -213,9 +220,9 @@ export default function Dashboard() {
 
   /* ————————————————— JSX ————————————————— */
   return (
-    <div className="flex min-h-screen bg-gray-900 text-gray-100 font-[Beiruti]">
+    <div className="flex min-h-screen bg-gray-50 text-gray-900 font-[Beiruti]">
       {/* ——— القائمة الجانبية ——— */}
-      <aside className="w-64 bg-gray-800 p-6 shadow-lg">
+      <aside className="w-64 bg-white p-6 shadow-lg border-r border-gray-200">
         <h2 className="text-2xl font-bold mb-6 text-center">القائمة</h2>
         <ul className="space-y-4">
           <li>
@@ -223,8 +230,8 @@ export default function Dashboard() {
               onClick={() => setActiveSection('categories')}
               className={`w-full text-right px-4 py-2 rounded-lg transition ${
                 activeSection === 'categories'
-                  ? 'bg-indigo-600 text-white shadow-xl'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-black text-white shadow-xl'
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               أقسام مهاراتي
@@ -235,8 +242,8 @@ export default function Dashboard() {
               onClick={() => setActiveSection('upload')}
               className={`w-full text-right px-4 py-2 rounded-lg transition ${
                 activeSection === 'upload'
-                  ? 'bg-indigo-600 text-white shadow-xl'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-black text-white shadow-xl'
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               رفع الصور
@@ -247,7 +254,10 @@ export default function Dashboard() {
 
       {/* ——— المحتوى الرئيسي ——— */}
       <main className="flex-1 p-10 space-y-10">
-        <h1 className="text-3xl font-bold text-center">لوحة التحكم</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">لوحة التحكم</h1>
+          <a href="/" className="text-black hover:underline">العودة للموقع</a>
+        </div>
 
         {/* ——— قسم الأقسام ——— */}
         {activeSection === 'categories' && (
@@ -257,7 +267,7 @@ export default function Dashboard() {
             className="space-y-10"
           >
             {/* إنشاء قسم جديد */}
-            <div className="bg-gray-800 rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">إنشاء قسم جديد</h2>
               <div className="flex flex-col md:flex-row gap-4">
                 <input
@@ -265,16 +275,16 @@ export default function Dashboard() {
                   placeholder="اسم القسم"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg p-2 flex-1 text-gray-100 placeholder-gray-400"
+                  className="bg-gray-100 border border-gray-300 rounded-lg p-2 flex-1 text-gray-900 placeholder-gray-500"
                 />
-                <label className="flex items-center gap-2 cursor-pointer text-gray-200">
+                <label className="flex items-center gap-2 cursor-pointer text-gray-600">
                   <FiFile /> غلاف
                   <input type="file" accept="image/*" hidden onChange={handleNewCover} />
                 </label>
                 <button
                   onClick={createCat}
                   disabled={creating}
-                  className="bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-lg shadow"
+                  className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg shadow"
                 >
                   <FiPlus className="inline-block" /> إنشاء
                 </button>
@@ -291,22 +301,22 @@ export default function Dashboard() {
             </div>
 
             {/* الأقسام الحالية */}
-            <div className="bg-gray-800 rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">الأقسام الحالية</h2>
               {loadingCats ? (
                 <div className="flex gap-4">
                   {[...Array(2)].map((_, i) => (
-                    <div key={i} className="w-32 h-32 bg-gray-700 animate-pulse rounded-lg" />
+                    <div key={i} className="w-32 h-32 bg-gray-200 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : categories.length === 0 ? (
-                <p className="text-gray-400">لا توجد أقسام.</p>
+                <p className="text-gray-500">لا توجد أقسام.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {categories.map(c => (
                     <div
                       key={c.id}
-                      className="bg-gray-800 border border-gray-700 rounded-2xl p-5 relative shadow-md hover:shadow-lg transition"
+                      className="bg-white border border-gray-300 rounded-2xl p-5 relative shadow-md hover:shadow-lg transition"
                     >
                       {editId === c.id ? (
                         <>
@@ -314,9 +324,9 @@ export default function Dashboard() {
                             type="text"
                             value={editName}
                             onChange={e => setEditName(e.target.value)}
-                            className="w-full mb-2 p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600"
+                            className="w-full mb-2 p-2 rounded-lg bg-gray-100 text-gray-900 border border-gray-300"
                           />
-                          <label className="flex items-center gap-2 mb-2 cursor-pointer text-gray-200">
+                          <label className="flex items-center gap-2 mb-2 cursor-pointer text-gray-600">
                             <FiFile /> غلاف جديد
                             <input type="file" accept="image/*" hidden onChange={handleEditCover} />
                           </label>
@@ -333,7 +343,7 @@ export default function Dashboard() {
                             <button
                               onClick={saveEdit}
                               disabled={saving}
-                              className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded-lg text-white"
+                              className="px-3 py-1 bg-black hover:bg-gray-800 rounded-lg text-white"
                             >
                               حفظ
                             </button>
@@ -356,17 +366,17 @@ export default function Dashboard() {
                               />
                             </div>
                           )}
-                          <p className="font-medium mb-4 text-gray-100">{c.name}</p>
+                          <p className="font-medium mb-4 text-gray-800">{c.name}</p>
                           <div className="flex justify-end gap-3">
                             <button
                               onClick={() => startEdit(c)}
-                              className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white"
+                              className="p-2 bg-black hover:bg-gray-800 rounded-lg text-white"
                             >
                               <FiEdit />
                             </button>
                             <button
                               onClick={() => deleteCat(c.id)}
-                              className="p-2 bg-red-600 hover:bg-red-500 rounded-lg text-white"
+                              className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white"
                             >
                               <FiTrash2 />
                             </button>
@@ -389,24 +399,25 @@ export default function Dashboard() {
             className="space-y-10"
           >
             {/* رفع جديد */}
-            <div className="bg-gray-800 rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">رفع صور</h2>
 
               {/* التحكم في القسم (اختياري للواجهة فقط) */}
               <div className="flex items-center gap-4">
-                <label className="text-gray-200">اختر القسم:</label>
+                <label className="text-gray-700">اختر القسم:</label>
                 <select
                   value={categoryForUpload}
                   onChange={e => setCategoryForUpload(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg p-2 text-gray-100"
+                  className="bg-gray-100 border border-gray-300 rounded-lg p-2 text-gray-900"
                 >
-                  <option value="skills">أقسام مهاراتي</option>
-                  <option value="logos">شعارات بنيتها</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </div>
 
               <div className="flex items-center gap-4">
-                <label className="flex-1 flex items-center justify-center gap-3 cursor-pointer bg-gray-700 border border-gray-600 rounded-lg py-3 hover:bg-gray-600">
+                <label className="flex-1 flex items-center justify-center gap-3 cursor-pointer bg-gray-100 border border-gray-300 rounded-lg py-3 hover:bg-gray-200">
                   <FiFile /> اختر ملفات
                   <input
                     ref={inputRef}
@@ -421,9 +432,9 @@ export default function Dashboard() {
                 <button
                   onClick={uploadFiles}
                   disabled={uploading || !files.length}
-                  className="w-16 h-16 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg flex items-center justify-center"
+                  className="w-16 h-16 bg-black hover:bg-gray-800 text-white rounded-lg flex items-center justify-center"
                 >
-                  {uploading ? <FiX className="animate-spin" /> : <FiUpload size={24} />}
+                  {uploading ? <FiLoader className="animate-spin" /> : <FiUpload size={24} />}
                 </button>
               </div>
 
@@ -444,20 +455,20 @@ export default function Dashboard() {
             </div>
 
             {/* الصور المخزنة */}
-            <div className="bg-gray-800 rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold">الصور المخزنة</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSelectMode(!selectMode)}
-                    className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg"
+                  className="px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg"
                   >
                     {selectMode ? 'إلغاء التحديد' : 'تحديد'}
                   </button>
                   {selectMode && images.length > 0 && (
                     <button
                       onClick={selectAll}
-                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg"
+                      className="px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg"
                     >
                       {selected.size === images.length ? 'إلغاء الكل' : 'تحديد الكل'}
                     </button>
@@ -468,7 +479,7 @@ export default function Dashboard() {
               {loadingImgs ? (
                 <div className="grid grid-cols-3 gap-4">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-32 bg-gray-700 animate-pulse rounded-lg" />
+                    <div key={i} className="h-32 bg-gray-200 animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : images.length === 0 ? (
@@ -485,14 +496,14 @@ export default function Dashboard() {
                       {selectMode ? (
                         <button
                           onClick={() => toggleSel(img.id)}
-                          className="absolute top-2 left-2 text-white bg-indigo-600 p-1 rounded-full"
+                          className="absolute top-2 left-2 text-white bg-black p-1 rounded-full"
                         >
                           {selected.has(img.id) ? <FiCheckSquare /> : <FiSquare />}
                         </button>
                       ) : (
                         <button
                           onClick={() => confirmDel([img.id])}
-                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"
+                          className="absolute top-2 right-2 bg-gray-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"
                         >
                           <FiTrash2 />
                         </button>
@@ -505,7 +516,7 @@ export default function Dashboard() {
               {selectMode && selected.size > 0 && (
                 <button
                   onClick={() => confirmDel(Array.from(selected))}
-                  className="mt-4 px-5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg"
+                  className="mt-4 px-5 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
                 >
                   حذف المحدد ({selected.size})
                 </button>
@@ -517,18 +528,18 @@ export default function Dashboard() {
         {/* ——— نافذة تأكيد الحذف ——— */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
-            <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl w-80 text-right space-y-4">
-              <p className="text-gray-100">هل أنت متأكد من حذف الصور المحددة؟</p>
+            <div className="bg-white p-6 rounded-2xl shadow-2xl w-80 text-right space-y-4">
+              <p className="text-gray-700">هل أنت متأكد من حذف الصور المحددة؟</p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-600 rounded-lg text-gray-200"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={doDelete}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg"
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
                 >
                   حذف
                 </button>
@@ -539,7 +550,7 @@ export default function Dashboard() {
 
         {/* ——— رسالة الحالة ——— */}
         {status && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-3 rounded-full">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full">
             {status}
           </div>
         )}
