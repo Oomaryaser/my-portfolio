@@ -23,14 +23,16 @@ handler.get(async (req, res) => {
 handler.use(upload.single('file'));          // المفتاح «file» هو نفسه الذى ترسله الواجهة‏:contentReference[oaicite:5]{index=5}
 
 handler.post(async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'no-file' });
+    console.log('🔵 POST-HIT post1');               // لتتأكد أنّ الطلب وصل
 
-  const { id } = req.query;
-  const { buffer, mimetype } = req.file;
+  const cover   = req.file ? req.file.buffer   : null;
+  const cType   = req.file ? req.file.mimetype : null;
+  
+  console.log('🔵 POST-HIT 1'+ req.category_id);               // لتتأكد أنّ الطلب وصل
 
   await pool.query(
     'INSERT INTO images (data, content_type, category_id) VALUES ($1,$2,$3)',
-    [buffer, mimetype, id]
+    [cover, cType,req.category_id]
   );
   res.status(201).json({ ok: true });
 });
@@ -44,3 +46,34 @@ handler.delete(async (req, res) => {
 
 export const config = { api: { bodyParser: false } };  // لازم لتعطيل بارسر Next.js
 export default handler;
+
+handler.post(async (req, res) => {
+  console.log('🔵 POST-HIT post2');               // لتتأكد أنّ الطلب وصل
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'no-file' });
+    }
+
+    const { id } = req.query;                      // category_id
+    const {
+      buffer,           // بيانات الصورة
+      mimetype,         // image/jpeg …
+      originalname      // اسم الملف الأصلي
+    } = req.file;
+
+    const fileName = originalname ?? randomUUID(); // يعوّض عمود name
+
+    await pool.query(
+      `INSERT INTO images (name, img, img_type, category_id)
+       VALUES ($1, $2, $3, $4)`,
+      [fileName, buffer, mimetype, id]
+    );
+
+    return res.status(201).json({ ok: true });
+  } catch (err) {
+    // يطبع كامل الـ Stack Trace
+    console.error('🚨 IMAGE-UPLOAD-ERR:\n', err.stack || err);
+    return res.status(500).json({ error: 'server-error' });
+  }
+});
