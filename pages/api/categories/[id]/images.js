@@ -1,6 +1,7 @@
 import nextConnect from 'next-connect';
-import multer      from 'multer';
-import pool        from '../../../../lib/db';   // ملاحظة مسار الرجوع ../..
+import multer from 'multer';
+import { randomUUID } from 'crypto';
+import pool from '../../../../lib/db';   // ملاحظة مسار الرجوع ../..
 
 const upload  = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
@@ -20,22 +21,8 @@ handler.get(async (req, res) => {
 });
 
 /* ———ـ رفع صورة جديدة ———ـ */
-handler.use(upload.single('file'));          // المفتاح «file» هو نفسه الذى ترسله الواجهة‏:contentReference[oaicite:5]{index=5}
+handler.use(upload.single('file'));
 
-handler.post(async (req, res) => {
-    console.log('🔵 POST-HIT post1');               // لتتأكد أنّ الطلب وصل
-
-  const cover   = req.file ? req.file.buffer   : null;
-  const cType   = req.file ? req.file.mimetype : null;
-  
-  console.log('🔵 POST-HIT 1 '+ req.cat);               // لتتأكد أنّ الطلب وصل
-
-  await pool.query(
-    'INSERT INTO images (data, content_type, category_id) VALUES ($1,$2,$3)',
-    [cover, cType,req.cat]
-  );
-  res.status(201).json({ ok: true });
-});
 
 /* ———ـ حذف صورة ———ـ (اختياري) */
 handler.delete(async (req, res) => {
@@ -77,3 +64,4 @@ handler.post(async (req, res) => {
     return res.status(500).json({ error: 'server-error' });
   }
 });
+
