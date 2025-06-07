@@ -28,11 +28,11 @@ handler.post(async (req, res) => {
   const cover   = req.file ? req.file.buffer   : null;
   const cType   = req.file ? req.file.mimetype : null;
   
-  console.log('🔵 POST-HIT 1'+ req.category_id);               // لتتأكد أنّ الطلب وصل
+  console.log('🔵 POST-HIT 1 '+ req.cat);               // لتتأكد أنّ الطلب وصل
 
   await pool.query(
     'INSERT INTO images (data, content_type, category_id) VALUES ($1,$2,$3)',
-    [cover, cType,req.category_id]
+    [cover, cType,req.cat]
   );
   res.status(201).json({ ok: true });
 });

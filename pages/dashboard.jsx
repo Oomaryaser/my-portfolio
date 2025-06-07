@@ -171,12 +171,14 @@ export default function Dashboard() {
 
   const uploadFiles = async () => {
     if (!files.length) return setStatus('❗ اختر صورة');
-    if (!categoryForUpload) return setStatus('❗ اختر القسم');
+    if (!categoryForUpload) return setStatus('❗ اختر القسم'+ categoryForUpload);
     setUploading(true);
     try {
       for (let f of files) {
-        const fm = new FormData();
+        const fm = new FormData();        fm.append('cat', categoryForUpload);
+
         fm.append('file', f);
+
         await fetch(`/api/categories/${categoryForUpload}/images`, {
           method: 'POST',
           body: fm
