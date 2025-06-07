@@ -35,19 +35,19 @@ export default function Gallery() {
       </header>
       <main className="flex-1 max-w-7xl mx-auto p-6">
         {loading ? (
-          <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4">
+          <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-0">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="mb-4 h-40 bg-gray-200 animate-pulse rounded-lg" />
+              <div key={i} className="mb-0 h-40 bg-gray-200 animate-pulse" />
             ))}
           </div>
         ) : images.length ? (
-          <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4">
+          <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-0">
             {images.map(img => (
               <motion.img
                 key={img.id}
                 src={img.src}
                 alt=""
-                className="mb-4 w-full rounded-lg"
+                className="mb-0 w-full"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4 }}
