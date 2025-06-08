@@ -62,21 +62,3 @@ The login page asks for both a username and password. The username should match
 `ADMIN_USERNAME` (default `omaradmin`). The password is hashed with PBKDF2 and
 compared with `ADMIN_HASH`. A signed HTTP-only cookie is issued upon successful
 login and checked on each dashboard request.
-
-You can generate a PBKDF2 hash for a new password using:
-
-```bash
-node scripts/hash.js mypassword mysalt
-```
-
-## Security Headers
-
-The app uses a [`middleware.js`](middleware.js) file to set common security headers for all responses, including:
-
-- `X-Frame-Options: DENY`
-- `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: same-origin`
-- `Content-Security-Policy: default-src 'self'; img-src 'self' data:; object-src 'none'`
-- `Strict-Transport-Security` in production
-
-These headers help mitigate clickjacking, MIME sniffing, and other common attacks.

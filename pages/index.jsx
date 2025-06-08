@@ -86,22 +86,17 @@ function Strip({ title, items, loading }) {
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <BoxSkel key={i} />)
             : items.length
-              ? items.map(({ id, src, name }) => (
-                  <div key={id} className="relative shrink-0 rounded-2xl overflow-hidden">
-                    <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-56 md:h-56 lg:w-64 lg:h-64 bg-gray-100">
-                      <img src={src} alt={name||''} className="w-full h-full object-cover"/>
+              ? items.map(({ id, src, name, link }) => (
+                  <a key={id} href={link || '#'} className="shrink-0 w-40 sm:w-48 md:w-56 lg:w-64 flex flex-col items-center space-y-2">
+                    <div className="w-full aspect-square bg-gray-100 overflow-hidden rounded-xl">
+                      <img src={src} alt={name||''} className="w-full h-full object-cover" />
                     </div>
                     {name && (
-                      <div className="
-                        absolute top-0 left-0 w-full
-                        bg-white/60 backdrop-blur-sm
-                        text-gray-800 text-sm sm:text-base md:text-lg
-                        text-center py-1
-                      ">
+                      <div className="text-center text-sm sm:text-base md:text-lg text-gray-800">
                         {name}
                       </div>
                     )}
-                  </div>
+                  </a>
                 ))
               : <p className="text-gray-500 px-4">لا توجد عناصر</p>}
         </div>
@@ -125,7 +120,12 @@ export default function Home() {
         const data = await res.json();
         setSkills(
           Array.isArray(data)
-            ? data.filter(c => c.cover).map(c => ({ id: c.id, src: c.cover, name: c.name }))
+            ? data.filter(c => c.cover).map(c => ({
+                id: c.id,
+                src: c.cover,
+                name: c.name,
+                link: `/gallery/${c.id}`
+              }))
             : []
         );
       } catch {
@@ -156,7 +156,7 @@ export default function Home() {
       <GlobalCSS />
 
       {/* Header with mobile sidebar toggle */}
-      <header className="flex-none bg-white border-b border-gray-200">
+      <header className="flex-none bg-black text-white">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center text-right space-x-2 rtl:space-x-reverse">
@@ -165,12 +165,12 @@ export default function Home() {
           </div>
 
           {/* Desktop nav + button */}
-          <nav className="hidden md:flex items-center space-x-6 text-lg text-gray-700 rtl:space-x-reverse">
-            <a href="#" className="hover:text-gray-900">اطلب تصميمك</a>
-            <a href="#" className="hover:text-gray-900">اتصل بعمر مباشرة</a>
-            <a href="#" className="hover:text-gray-900">اسأل سؤالك</a>
-            <a href="#" className="hover:text-gray-900">حسابات عمر</a>
-            <a href="#" className="hover:text-gray-900">نبذة عن عمر</a>
+          <nav className="hidden md:flex items-center space-x-6 text-lg text-white rtl:space-x-reverse">
+            <a href="#" className="hover:text-gray-200">اطلب تصميمك</a>
+            <a href="#" className="hover:text-gray-200">اتصل بعمر مباشرة</a>
+            <a href="#" className="hover:text-gray-200">اسأل سؤالك</a>
+            <a href="#" className="hover:text-gray-200">حسابات عمر</a>
+            <a href="#" className="hover:text-gray-200">نبذة عن عمر</a>
             <button className="px-6 py-2 bg-black text-white font-medium rounded-full shadow hover:opacity-90 active:opacity-80 transition">
               تواصل معي
             </button>
@@ -181,7 +181,7 @@ export default function Home() {
             <a href="tel:+123456789" className="p-3 bg-black text-white rounded-full shake text-xl hover:opacity-90 transition">
               <FiPhoneCall />
             </a>
-            <button onClick={() => setMenuOpen(true)} className="text-2xl text-gray-700 hover:text-gray-900">
+            <button onClick={() => setMenuOpen(true)} className="text-2xl text-white hover:text-gray-200">
               <FiMenu />
             </button>
           </div>

@@ -46,7 +46,7 @@ export default function handler(req, res) {
       Buffer.from(username),
       Buffer.from(expectedUser)
     );
-  if (!userMatch) {
+  if (username !== (process.env.ADMIN_USERNAME || 'omaradmin')) {
     return res.status(401).json({ error: 'invalid-username' });
   }
 
