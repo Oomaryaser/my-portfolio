@@ -1,12 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [csrfToken, setCsrfToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/csrf')
+      .then(res => res.json())
+      .then(data => setCsrfToken(data.token))
+      .catch(() => setCsrfToken(''))
+  }, [])
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -14,7 +22,10 @@ export default function Login() {
     setError('');
     const res = await fetch('/api/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
       body: JSON.stringify({ username, password })
     });
     if (res.ok) {

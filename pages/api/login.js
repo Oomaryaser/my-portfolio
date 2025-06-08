@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { createSessionToken } from '../../lib/auth';
+import { verifyCsrf } from '../../lib/csrf';
 
 const ITERATIONS = 100000;
 const KEY_LEN = 64;
@@ -28,6 +29,10 @@ export default function handler(req, res) {
     return res.status(405).end();
   }
 
+  if (!verifyCsrf(req)) {
+    return res.status(403).json({ error: 'invalid-csrf' });
+  }
+
   const ip =
     req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
   if (recordAttempt(ip)) {
@@ -46,10 +51,10 @@ export default function handler(req, res) {
       Buffer.from(username),
       Buffer.from(expectedUser)
     );
-  if (username !== (process.env.ADMIN_USERNAME || 'omaradmin')) {
-    return res.status(401).json({ error: 'invalid-username' });
-  }
-
+  res.setHeader('Set-Cookie', [
+    `session=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=3600;${prod ? ' Secure;' : ''}`,
+    `csrf=; Path=/; Max-Age=0; SameSite=Strict${prod ? '; Secure' : ''}`
+  ]);
   const hash = crypto
     .pbkdf2Sync(password, process.env.ADMIN_SALT, ITERATIONS, KEY_LEN, DIGEST)
     .toString('hex');
