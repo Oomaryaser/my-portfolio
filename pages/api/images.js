@@ -1,5 +1,6 @@
 // pages/api/images.js
 import supabase from '../../lib/supabase';
+import toBase64 from '../../lib/b64';
 
 export default async function handler(req, res) {
   /* ————— جلب كل الصور ————— */
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
 
       const imgs = (data || []).map(r => ({
         id: r.id,
-        src: `data:${r.content_type};base64,${r.data}`
+        src: `data:${r.content_type};base64,${toBase64(r.data)}`
       }));
 
       return res.status(200).json(imgs);

@@ -1,6 +1,7 @@
 import nextConnect from 'next-connect';
 import multer from 'multer';
 import supabase from '../../../lib/supabase';
+import toBase64 from '../../../lib/b64';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
@@ -19,7 +20,7 @@ handler.get(async (_, res) => {
   const cats = (data || []).map(r => ({
     id: r.id,
     name: r.name,
-    cover: r.cover ? `data:${r.cover_type};base64,${r.cover}` : ''
+    cover: r.cover ? `data:${r.cover_type};base64,${toBase64(r.cover)}` : ''
   }));
 
   res.json(cats);

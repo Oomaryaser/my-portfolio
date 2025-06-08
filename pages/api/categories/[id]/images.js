@@ -1,6 +1,7 @@
 import nextConnect from 'next-connect';
 import multer      from 'multer';
 import supabase    from '../../../../lib/supabase';
+import toBase64    from '../../../../lib/b64';
 const util = require('util');
 
 const upload  = multer({ storage: multer.memoryStorage() });
@@ -22,7 +23,7 @@ handler.get(async (req, res) => {
 
   const imgs = (data || []).map(r => ({
     id: r.id,
-    src: `data:${r.content_type};base64,${r.data}`
+    src: `data:${r.content_type};base64,${toBase64(r.data)}`
   }));
 
   res.json(imgs);
@@ -67,5 +68,6 @@ handler.delete(async (req, res) => {
   res.json({ ok: true });
 });
 
-export const config = { api: { bodyParser: false } };  // لازم لتعطيل بارسر Next.js
+
+export const config = { api: { bodyParser: false } };
 export default handler;
