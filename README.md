@@ -62,9 +62,9 @@ The login page asks for both a username and password. The username should match
 `ADMIN_USERNAME` (default `omaradmin`). The password is hashed with PBKDF2 and
 compared with `ADMIN_HASH`. A signed HTTP-only cookie is issued upon successful
 login and checked on each dashboard request.
-
 You can generate a PBKDF2 hash for a new password using:
 
 ```bash
 node scripts/hash.js mypassword mysalt
 ```
+=======
