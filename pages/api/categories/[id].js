@@ -1,6 +1,7 @@
 import nextConnect from 'next-connect';
 import multer from 'multer';
 import pool from '../../../lib/db';
+import optimize from '../../../lib/optimize';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
@@ -28,8 +29,8 @@ handler.put(async (req, res) => {
 
   if (!name) return res.status(400).json({ error: 'name required' });
 
-  const cover = req.file ? req.file.buffer   : null;
-  const cType = req.file ? req.file.mimetype : null;
+  const cover = req.file ? await optimize(req.file.buffer) : null;
+  const cType = req.file ? 'image/webp' : null;
 
   const r = await pool.query(
   'UPDATE categories SET name=$1, cover=COALESCE($2,cover), cover_type=COALESCE($3,cover_type) WHERE id=$4 RETURNING id',
