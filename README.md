@@ -2,7 +2,13 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
+
+```bash
+npm install
+```
+
+Then run the development server:
 
 ```bash
 npm run dev
@@ -38,3 +44,39 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+
+## Dashboard Authentication
+
+The dashboard is protected by a simple password-based login. To enable it, create a `.env.local` file based on `.env.example` and provide the following variables:
+
+```
+ADMIN_SALT=your_unique_salt
+ADMIN_HASH=pbkdf2_hash_of_omar@44544
+ADMIN_USERNAME=omaradmin
+SESSION_SECRET=random_session_secret
+RATE_LIMIT_WINDOW=60000
+RATE_LIMIT_MAX=5
+```
+
+The login page asks for both a username and password. The username should match
+`ADMIN_USERNAME` (default `omaradmin`). The password is hashed with PBKDF2 and
+compared with `ADMIN_HASH`. A signed HTTP-only cookie is issued upon successful
+login and checked on each dashboard request.
+
+You can generate a PBKDF2 hash for a new password using:
+
+```bash
+node scripts/hash.js mypassword mysalt
+```
+
+## Security Headers
+
+The app uses a [`middleware.js`](middleware.js) file to set common security headers for all responses, including:
+
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: same-origin`
+- `Content-Security-Policy: default-src 'self'; img-src 'self' data:; object-src 'none'`
+- `Strict-Transport-Security` in production
+
+These headers help mitigate clickjacking, MIME sniffing, and other common attacks.
