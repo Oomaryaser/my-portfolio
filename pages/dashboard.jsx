@@ -1,5 +1,6 @@
 // File: pages/dashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { verifySession } from '../lib/auth';
 import { motion } from 'framer-motion';
 import {
   FiUpload,
@@ -211,6 +212,11 @@ export default function Dashboard() {
     fetchImgs();
   };
 
+  const handleLogout = async () => {
+    await fetch('/api/logout');
+    window.location.href = '/login';
+  };
+
   /* ————————————————— JSX ————————————————— */
   return (
     <div className="flex min-h-screen bg-gray-900 text-gray-100 font-[Beiruti]">
@@ -240,6 +246,14 @@ export default function Dashboard() {
               }`}
             >
               رفع الصور
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={handleLogout}
+              className="w-full text-right px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"
+            >
+              تسجيل الخروج
             </button>
           </li>
         </ul>
@@ -546,4 +560,13 @@ export default function Dashboard() {
       </main>
     </div>
   );
+}
+
+export async function getServerSideProps({ req }) {
+  if (!verifySession(req)) {
+    return {
+      redirect: { destination: '/login', permanent: false }
+    };
+  }
+  return { props: {} };
 }
