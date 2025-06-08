@@ -17,6 +17,7 @@ import {
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState('categories');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [catKind, setCatKind] = useState('skill');
 
   /* ————————————————— بيانات الأقسام ————————————————— */
   const [categories, setCategories] = useState([]);
@@ -49,7 +50,7 @@ export default function Dashboard() {
   const fetchCats = async () => {
     setLoadingCats(true);
     try {
-      const res = await fetch('/api/categories');
+      const res = await fetch(`/api/categories?kind=${catKind}`);
       const data = await res.json();
       setCategories(data);
       if (data.length && !categoryForUpload) {
@@ -81,7 +82,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchCats();
-  }, []);
+  }, [catKind]);
 
   useEffect(() => {
     fetchImgs();
@@ -100,6 +101,7 @@ export default function Dashboard() {
     try {
       const fm = new FormData();
       fm.append('name', newName.trim());
+      fm.append('kind', catKind);
       if (newCover) fm.append('cover', newCover);
       await fetch('/api/categories', { method: 'POST', body: fm });
       setStatus('✅ تم إنشاء القسم');
@@ -132,6 +134,7 @@ export default function Dashboard() {
     try {
       const fm = new FormData();
       fm.append('name', editName.trim());
+      fm.append('kind', catKind);
       if (editCover) fm.append('cover', editCover);
       await fetch(`/api/categories/${editId}`, { method: 'PUT', body: fm });
       setStatus('✅ تم حفظ التعديل');
@@ -298,6 +301,17 @@ export default function Dashboard() {
             {/* إنشاء قسم جديد */}
             <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">إنشاء قسم جديد</h2>
+              <div className="flex items-center gap-4">
+                <label className="text-gray-700">نوع الأقسام:</label>
+                <select
+                  value={catKind}
+                  onChange={e => setCatKind(e.target.value)}
+                  className="bg-gray-100 border border-gray-300 rounded-lg p-2 text-gray-900"
+                >
+                  <option value="skill">أقسام مهاراتي</option>
+                  <option value="logo">شعارات بنيتها</option>
+                </select>
+              </div>
               <div className="flex flex-col md:flex-row gap-4">
                 <input
                   type="text"
@@ -430,6 +444,18 @@ export default function Dashboard() {
             {/* رفع جديد */}
             <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">رفع صور</h2>
+
+              <div className="flex items-center gap-4">
+                <label className="text-gray-700">نوع الأقسام:</label>
+                <select
+                  value={catKind}
+                  onChange={e => setCatKind(e.target.value)}
+                  className="bg-gray-100 border border-gray-300 rounded-lg p-2 text-gray-900"
+                >
+                  <option value="skill">أقسام مهاراتي</option>
+                  <option value="logo">شعارات بنيتها</option>
+                </select>
+              </div>
 
               {/* التحكم في القسم (اختياري للواجهة فقط) */}
               <div className="flex items-center gap-4">

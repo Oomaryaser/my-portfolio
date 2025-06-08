@@ -131,7 +131,7 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/categories');
+        const res = await fetch('/api/categories?kind=skill');
         const data = await res.json();
         setSkills(
           Array.isArray(data)
@@ -155,7 +155,7 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/categories');
+        const res = await fetch('/api/categories?kind=logo');
         const data = await res.json();
         setLogos(
           Array.isArray(data)

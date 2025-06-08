@@ -8,7 +8,7 @@ const handler = nextConnect();
 handler.get(async (req, res) => {
   const { id } = req.query;
   const r = await pool.query(
-    'SELECT id, name, cover, cover_type FROM categories WHERE id=$1',
+    'SELECT id, name, cover, cover_type, kind FROM categories WHERE id=$1',
     [id]
   );
   if (r.rows.length === 0) return res.status(404).json({ error: 'not-found' });
@@ -16,6 +16,7 @@ handler.get(async (req, res) => {
   res.json({
     id: c.id,
     name: c.name,
+    kind: c.kind,
     cover: c.cover ? `data:${c.cover_type};base64,${c.cover.toString('base64')}` : ''
   });
 });
@@ -24,7 +25,7 @@ handler.use(upload.single('cover'));
 
 handler.put(async (req, res) => {
   const { id } = req.query;
-  const { name } = req.body;
+  const { name, kind } = req.body;
 
   if (!name) return res.status(400).json({ error: 'name required' });
 
@@ -32,9 +33,9 @@ handler.put(async (req, res) => {
   const cType = req.file ? req.file.mimetype : null;
 
   const r = await pool.query(
-  'UPDATE categories SET name=$1, cover=COALESCE($2,cover), cover_type=COALESCE($3,cover_type) WHERE id=$4 RETURNING id',
-  [name.trim(), cover, cType, id]
-);
+    'UPDATE categories SET name=$1, cover=COALESCE($2,cover), cover_type=COALESCE($3,cover_type), kind=COALESCE($4,kind) WHERE id=$5 RETURNING id',
+    [name.trim(), cover, cType, kind, id]
+  );
 
   res.json({ ok: true });
 });
