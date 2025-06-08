@@ -47,6 +47,8 @@ The dashboard is protected by a simple password-based login. To enable it, creat
 ADMIN_SALT=your_unique_salt
 ADMIN_HASH=pbkdf2_hash_of_password
 SESSION_SECRET=random_session_secret
+RATE_LIMIT_WINDOW=60000
+RATE_LIMIT_MAX=5
 ```
 
 The password field is hashed using PBKDF2 and compared with `ADMIN_HASH`. A signed HTTP-only cookie is issued upon successful login and checked on each dashboard request.
