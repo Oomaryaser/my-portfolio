@@ -9,7 +9,6 @@ const handler = nextConnect();
 handler.use(upload.single('file'));
 
 handler.post(async (req, res) => {
-    console.log('🔵 POST-HIT post3');               // لتتأكد أنّ الطلب وصل
 
   try {
     const { buffer, mimetype } = req.file;              // بايتات الصورة
