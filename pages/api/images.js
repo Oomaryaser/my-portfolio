@@ -1,5 +1,5 @@
 // pages/api/images.js
-import supabase from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import toBase64 from '../../lib/b64';
 
 export default async function handler(req, res) {

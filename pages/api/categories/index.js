@@ -1,6 +1,6 @@
 import nextConnect from 'next-connect';
 import multer from 'multer';
-import supabase from '../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 import toBase64 from '../../../lib/b64';
 
 const upload = multer({ storage: multer.memoryStorage() });
