@@ -35,7 +35,9 @@ export default function Gallery() {
   const item      = { hidden:{opacity:0, y:20}, visible:{opacity:1, y:0} };
 
   const skel = `rounded-xl bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-[loading_1.2s_ease-in-out_infinite]`;
-  const low  = src => `${src}${src.includes('?') ? '&' : '?'}w=480&q=40`;
+const low  = src => src.startsWith('data:')
+  ? src
+  : `${src}${src.includes('?') ? '&' : '?'}w=480&q=40`;
 
   const headerCls =
     "fixed top-4 inset-x-4 sm:inset-x-6 md:inset-x-10 lg:inset-x-16 z-50 flex justify-between items-center " +
