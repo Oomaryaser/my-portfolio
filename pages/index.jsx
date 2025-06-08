@@ -5,7 +5,7 @@ import { FiPhoneCall, FiMenu, FiX } from 'react-icons/fi';
 /* — Global CSS + hide vertical scroll + gentle shake keyframes — */
 const GlobalCSS = () => (
   <style>{`
-    body { overflow:hidden; }
+    body { overflow:auto; }
     .white-scroll::-webkit-scrollbar { height:6px; background:#fff; }
     .white-scroll::-webkit-scrollbar-thumb { background:#fff; border-radius:3px; }
     .white-scroll::-webkit-scrollbar-track { background:#fff; }
@@ -86,24 +86,39 @@ function Strip({ title, items, loading }) {
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <BoxSkel key={i} />)
             : items.length
-              ? items.map(({ id, src, name, link }) => (
-                  <a key={id} href={link || '#'} className="shrink-0 w-40 sm:w-48 md:w-56 lg:w-64 flex flex-col items-center space-y-2">
-                    <div className="w-full aspect-square bg-gray-100 overflow-hidden rounded-xl">
-                      <img src={src} alt={name||''} className="w-full h-full object-cover" />
-                    </div>
-                    {name && (
-                      <div className="text-center text-sm sm:text-base md:text-lg text-gray-800">
-                        {name}
+              ? items.map(({ id, src, name, link }) => {
+                  const content = (
+                    <>
+                      <div className="w-full aspect-square bg-gray-100 overflow-hidden rounded-xl">
+                        <img src={src} alt={name||''} className="w-full h-full object-cover" />
                       </div>
-                    )}
-                  </a>
-                ))
+                      {name && (
+                        <div className="text-center text-sm sm:text-base md:text-lg text-gray-800">
+                          {name}
+                        </div>
+                      )}
+                    </>
+                  );
+                  return link ? (
+                    <a key={id} href={link} className="shrink-0 w-40 sm:w-48 md:w-56 lg:w-64 flex flex-col items-center space-y-2">
+                      {content}
+                    </a>
+                  ) : (
+                    <div key={id} className="shrink-0 w-40 sm:w-48 md:w-56 lg:w-64 flex flex-col items-center space-y-2 cursor-default">
+                      {content}
+                    </div>
+                  );
+                })
               : <p className="text-gray-500 px-4">لا توجد عناصر</p>}
         </div>
       </div>
     </section>
   );
 }
+
+const headerCls =
+  "fixed top-4 inset-x-4 sm:inset-x-6 md:inset-x-10 lg:inset-x-16 z-50 flex justify-between items-center " +
+  "px-5 py-3 md:py-4 bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-white/40 text-gray-900";
 
 export default function Home() {
   const [skills, setSkills] = useState([]);
@@ -136,13 +151,17 @@ export default function Home() {
     })();
   }, []);
 
-  /* fetch images */
+  /* fetch logo categories */
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/images');
+        const res = await fetch('/api/categories');
         const data = await res.json();
-        setLogos(Array.isArray(data) ? data : []);
+        setLogos(
+          Array.isArray(data)
+            ? data.filter(c => c.cover).map(c => ({ id:c.id, src:c.cover, name:c.name }))
+            : []
+        );
       } catch {
         setLogos([]);
       } finally {
@@ -152,39 +171,34 @@ export default function Home() {
   }, []);
 
   return (
-    <div dir="rtl" className="font-[Beiruti] h-screen flex flex-col bg-white text-gray-900">
+    <div dir="rtl" className="font-[Beiruti] min-h-screen flex flex-col bg-white text-gray-900">
       <GlobalCSS />
 
       {/* Header with mobile sidebar toggle */}
-      <header className="flex-none bg-black text-white">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center text-right space-x-2 rtl:space-x-reverse">
-            <span className="text-2xl sm:text-3xl md:text-4xl font-bold">مرئـــيات</span>
-            <span className="text-lg sm:text-xl md:text-2xl font-medium">عُمــــر</span>
-          </div>
+      <header className={headerCls}>
+        <div className="flex items-center text-right space-x-2 rtl:space-x-reverse">
+          <span className="text-2xl sm:text-3xl md:text-4xl font-bold">مرئـــيات</span>
+          <span className="text-lg sm:text-xl md:text-2xl font-medium">عُمــــر</span>
+        </div>
 
-          {/* Desktop nav + button */}
-          <nav className="hidden md:flex items-center space-x-6 text-lg text-white rtl:space-x-reverse">
-            <a href="#" className="hover:text-gray-200">اطلب تصميمك</a>
-            <a href="#" className="hover:text-gray-200">اتصل بعمر مباشرة</a>
-            <a href="#" className="hover:text-gray-200">اسأل سؤالك</a>
-            <a href="#" className="hover:text-gray-200">حسابات عمر</a>
-            <a href="#" className="hover:text-gray-200">نبذة عن عمر</a>
-            <button className="px-6 py-2 bg-black text-white font-medium rounded-full shadow hover:opacity-90 active:opacity-80 transition">
-              تواصل معي
-            </button>
-          </nav>
+        <nav className="hidden md:flex items-center space-x-6 text-lg rtl:space-x-reverse">
+          <a href="#" className="hover:text-gray-700">اطلب تصميمك</a>
+          <a href="#" className="hover:text-gray-700">اتصل بعمر مباشرة</a>
+          <a href="#" className="hover:text-gray-700">اسأل سؤالك</a>
+          <a href="#" className="hover:text-gray-700">حسابات عمر</a>
+          <a href="#" className="hover:text-gray-700">نبذة عن عمر</a>
+          <button className="px-6 py-2 bg-black text-white font-medium rounded-full shadow hover:opacity-90 active:opacity-80 transition">
+            تواصل معي
+          </button>
+        </nav>
 
-          {/* Mobile icons */}
-          <div className="flex md:hidden items-center space-x-4 rtl:space-x-reverse">
-            <a href="tel:+123456789" className="p-3 bg-black text-white rounded-full shake text-xl hover:opacity-90 transition">
-              <FiPhoneCall />
-            </a>
-            <button onClick={() => setMenuOpen(true)} className="text-2xl text-white hover:text-gray-200">
-              <FiMenu />
-            </button>
-          </div>
+        <div className="flex md:hidden items-center space-x-4 rtl:space-x-reverse">
+          <a href="tel:+123456789" className="p-3 bg-black text-white rounded-full shake text-xl hover:opacity-90 transition">
+            <FiPhoneCall />
+          </a>
+          <button onClick={() => setMenuOpen(true)} className="text-2xl hover:text-gray-700">
+            <FiMenu />
+          </button>
         </div>
 
         {/* Mobile sidebar with smooth slide */}
@@ -219,12 +233,12 @@ export default function Home() {
       </header>
 
       {/* Content: strips & side cards */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <main className="flex-1 overflow-hidden px-6 lg:px-12 py-8 space-y-8">
+      <div className="flex-1 flex flex-col md:flex-row overflow-auto pt-24">
+        <main className="flex-1 overflow-auto px-6 lg:px-12 py-8 space-y-8">
           <Strip title="اقسام مهاراتي" items={skills} loading={ls}/>
           <Strip title="شعارات بنيتها"  items={logos}  loading={ll}/>
         </main>
-        <aside className="w-full md:w-2/5 xl:w-[26rem] flex flex-col px-6 lg:px-12 py-8 space-y-8 overflow-hidden flex-none">
+        <aside className="w-full md:w-2/5 xl:w-[26rem] flex flex-col px-6 lg:px-12 py-8 space-y-8 overflow-auto flex-none">
           <section className="space-y-4">
             <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-right">آخر أعمالي</h3>
             {ll ? <CardSkel tall={false}/> : (
