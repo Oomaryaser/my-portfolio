@@ -1,6 +1,7 @@
 import nextConnect from 'next-connect';
 import multer from 'multer';
 import pool from '../../../lib/db';
+import optimize from '../../../lib/optimize';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
@@ -25,8 +26,8 @@ handler.post(async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'name-required' });
 
-  const cover   = req.file ? req.file.buffer   : null;
-  const cType   = req.file ? req.file.mimetype : null;
+  const cover   = req.file ? await optimize(req.file.buffer) : null;
+  const cType   = req.file ? 'image/webp' : null;
 
   const r = await pool.query(
     'INSERT INTO categories (name, cover, cover_type) VALUES ($1,$2,$3) RETURNING id',
