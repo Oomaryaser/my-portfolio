@@ -1,7 +1,7 @@
 import nextConnect from 'next-connect';
 import multer      from 'multer';
+import { randomUUID } from 'crypto';
 import pool        from '../../../../lib/db';   // ملاحظة مسار الرجوع ../..
-const util = require('util');
 
 const upload  = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
@@ -21,22 +21,7 @@ handler.get(async (req, res) => {
 });
 
 /* ———ـ رفع صورة جديدة ———ـ */
-handler.use(upload.single('file'));          // المفتاح «file» هو نفسه الذى ترسله الواجهة\:contentReference[oaicite:5]{index=5}
-
-handler.post(async (req, res) => {
-    console.log('🔵 POST-HIT post1');               // لتتأكد أنّ الطلب وصل
-  const { id }   = req.query;
-  const cover   = req?.file ? req?.file?.buffer   : null;
-  const cType   = req?.file ? req?.file?.mimetype : null;
-console.log(util.inspect(req, { showHidden: false, depth: null, colors: true }));
-  console.log('🔵 POST-HIT 1 '+ req.cat);               // لتتأكد أنّ الطلب وصل
-
-  await pool.query(
-    'INSERT INTO images (data, content_type, category_id) VALUES ($1,$2,$3)',
-    [cover, cType, id]
-  );
-  res.status(201).json({ ok: true });
-});
+handler.use(upload.single('file')); // المفتاح «file» هو نفسه الذي ترسله الواجهة
 
 /* ———ـ حذف صورة ———ـ (اختياري) */
 handler.delete(async (req, res) => {
@@ -49,7 +34,6 @@ export const config = { api: { bodyParser: false } };  // لازم لتعطيل 
 export default handler;
 
 handler.post(async (req, res) => {
-  console.log('🔵 POST-HIT post2');               // لتتأكد أنّ الطلب وصل
 
   try {
     if (!req.file) {
