@@ -39,6 +39,13 @@ export default function handler(req, res) {
     return res.status(400).json({ error: 'missing-credentials' });
   }
 
+  const expectedUser = process.env.ADMIN_USERNAME || 'omaradmin';
+  const userMatch =
+    username.length === expectedUser.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(username),
+      Buffer.from(expectedUser)
+    );
   if (username !== (process.env.ADMIN_USERNAME || 'omaradmin')) {
     return res.status(401).json({ error: 'invalid-username' });
   }
