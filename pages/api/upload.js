@@ -1,7 +1,7 @@
 // pages/api/upload.js
 import nextConnect from 'next-connect';
 import multer from 'multer';
-import pool from '../../lib/db';
+import supabase from '../../lib/supabase';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
@@ -13,11 +13,18 @@ handler.post(async (req, res) => {
 
   try {
     const { buffer, mimetype } = req.file;              // بايتات الصورة
-    const r = await pool.query(
-      'INSERT INTO images (data, content_type) VALUES ($1,$2) RETURNING id',
-      [buffer, mimetype]
-    );
-    return res.status(201).json({ id: r.rows[0].id });
+    const { data, error } = await supabase
+      .from('images')
+      .insert([{ data: buffer.toString('base64'), content_type: mimetype }])
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'upload-fail' });
+    }
+
+    return res.status(201).json({ id: data.id });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'upload-fail' });

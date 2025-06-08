@@ -1,21 +1,27 @@
 import nextConnect from 'next-connect';
 import multer from 'multer';
-import pool from '../../../lib/db';
+import supabase from '../../../lib/supabase';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
 
 handler.get(async (_, res) => {
-  const { rows } = await pool.query(
-    'SELECT id, name, cover, cover_type FROM categories ORDER BY id DESC'
-  );
-  const cats = rows.map(r => ({
-    id:   r.id,
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, cover, cover_type')
+    .order('id', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'fetch-fail' });
+  }
+
+  const cats = (data || []).map(r => ({
+    id: r.id,
     name: r.name,
-    cover: r.cover
-      ? `data:${r.cover_type};base64,${r.cover.toString('base64')}`
-      : ''
+    cover: r.cover ? `data:${r.cover_type};base64,${r.cover}` : ''
   }));
+
   res.json(cats);
 });
 
@@ -25,14 +31,21 @@ handler.post(async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'name-required' });
 
-  const cover   = req.file ? req.file.buffer   : null;
-  const cType   = req.file ? req.file.mimetype : null;
+  const cover = req.file ? req.file.buffer.toString('base64') : null;
+  const cType = req.file ? req.file.mimetype : null;
 
-  const r = await pool.query(
-    'INSERT INTO categories (name, cover, cover_type) VALUES ($1,$2,$3) RETURNING id',
-    [name.trim(), cover, cType]
-  );
-  res.status(201).json({ id: r.rows[0].id });
+  const { data, error } = await supabase
+    .from('categories')
+    .insert([{ name: name.trim(), cover, cover_type: cType }])
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'insert-fail' });
+  }
+
+  res.status(201).json({ id: data.id });
 });
 
 export const config = { api: { bodyParser: false } };
