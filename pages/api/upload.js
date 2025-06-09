@@ -1,7 +1,7 @@
 // pages/api/upload.js
 import nextConnect from 'next-connect';
 import multer from 'multer';
-import supabase from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
