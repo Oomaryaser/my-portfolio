@@ -1,7 +1,6 @@
 import nextConnect from 'next-connect';
 import multer from 'multer';
 import supabase from '../../../lib/supabase';
-import toBase64 from '../../../lib/b64';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
@@ -10,7 +9,7 @@ handler.get(async (req, res) => {
   const { id } = req.query;
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, cover, cover_type')
+    .select('id, name, cover_url')
     .eq('id', id)
     .single();
 
@@ -19,7 +18,7 @@ handler.get(async (req, res) => {
   res.json({
     id: data.id,
     name: data.name,
-    cover: data.cover ? `data:${data.cover_type};base64,${toBase64(data.cover)}` : ''
+    cover: data.cover_url || ''
   });
 });
 
@@ -31,16 +30,29 @@ handler.put(async (req, res) => {
 
   if (!name) return res.status(400).json({ error: 'name required' });
 
-  const cover = req.file ? req.file.buffer : null;
-  const cType = req.file ? req.file.mimetype : null;
+  const updateData = { name: name.trim() };
+
+  if (req.file) {
+    const { buffer, mimetype, originalname } = req.file;
+    const fileName = `${Date.now()}-${originalname}`;
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(fileName, buffer, { contentType: mimetype });
+
+    if (uploadError) {
+      console.error(uploadError);
+      return res.status(500).json({ error: 'upload-fail' });
+    }
+
+    const {
+      data: { publicUrl }
+    } = supabase.storage.from('images').getPublicUrl(fileName);
+    updateData.cover_url = publicUrl;
+  }
 
   const { error } = await supabase
     .from('categories')
-    .update({
-      name: name.trim(),
-      ...(cover && { cover }),
-      ...(cType && { cover_type: cType })
-    })
+    .update(updateData)
     .eq('id', id);
 
   if (error) {
