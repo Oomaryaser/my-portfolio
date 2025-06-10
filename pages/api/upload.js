@@ -15,7 +15,7 @@ handler.post(async (req, res) => {
     const { buffer, mimetype } = req.file;              // بايتات الصورة
     const { data, error } = await supabase
       .from('images')
-      .insert([{ data: buffer.toString('base64'), content_type: mimetype }])
+      .insert([{ data: buffer, content_type: mimetype }])
       .select('id')
       .single();
 

@@ -31,7 +31,7 @@ handler.put(async (req, res) => {
 
   if (!name) return res.status(400).json({ error: 'name required' });
 
-  const cover = req.file ? req.file.buffer.toString('base64') : null;
+  const cover = req.file ? req.file.buffer : null;
   const cType = req.file ? req.file.mimetype : null;
 
   const { error } = await supabase

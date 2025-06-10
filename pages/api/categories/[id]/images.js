@@ -42,7 +42,7 @@ handler.post(async (req, res) => {
 
   const { error } = await supabase
     .from('images')
-    .insert([{ data: cover ? cover.toString('base64') : null, content_type: cType, category_id: id }]);
+    .insert([{ data: cover, content_type: cType, category_id: id }]);
 
   if (error) {
     console.error(error);
