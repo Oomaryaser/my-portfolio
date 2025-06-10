@@ -1,6 +1,5 @@
 // pages/api/images.js
 import supabase from '../../lib/supabase';
-import toBase64 from '../../lib/b64';
 
 export default async function handler(req, res) {
   /* ————— جلب كل الصور ————— */
@@ -9,7 +8,7 @@ export default async function handler(req, res) {
       const { cat } = req.query;
       let query = supabase
         .from('images')
-        .select('id, data, content_type')
+        .select('id, image_url')
         .order('id', { ascending: false });
       if (cat) query = query.eq('category_id', cat);
       const { data, error } = await query;
@@ -19,10 +18,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'fetch-fail' });
       }
 
-      const imgs = (data || []).map(r => ({
-        id: r.id,
-        src: `data:${r.content_type};base64,${toBase64(r.data)}`
-      }));
+      const imgs = (data || []).map(r => ({ id: r.id, src: r.image_url }));
 
       return res.status(200).json(imgs);
     } catch (err) {

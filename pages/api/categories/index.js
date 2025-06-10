@@ -32,7 +32,7 @@ handler.post(async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'name-required' });
 
-  const cover = req.file ? req.file.buffer.toString('base64') : null;
+  const cover = req.file ? req.file.buffer : null;
   const cType = req.file ? req.file.mimetype : null;
 
   const { data, error } = await supabase

@@ -9,20 +9,27 @@ const handler = nextConnect();
 handler.use(upload.single('file'));
 
 handler.post(async (req, res) => {
-    console.log('🔵 POST-HIT post3');               // لتتأكد أنّ الطلب وصل
+  const { buffer, mimetype, originalname } = req.file || {};
 
   try {
-    const { buffer, mimetype } = req.file;              // بايتات الصورة
+    const fileName = `${Date.now()}-${originalname}`;
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(fileName, buffer, { contentType: mimetype });
+
+    if (uploadError) throw uploadError;
+
+    const {
+      data: { publicUrl }
+    } = supabase.storage.from('images').getPublicUrl(fileName);
+
     const { data, error } = await supabase
       .from('images')
-      .insert([{ data: buffer.toString('base64'), content_type: mimetype }])
+      .insert([{ image_url: publicUrl }])
       .select('id')
       .single();
 
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'upload-fail' });
-    }
+    if (error) throw error;
 
     return res.status(201).json({ id: data.id });
   } catch (err) {

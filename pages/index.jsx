@@ -89,7 +89,7 @@ function Strip({ title, items, loading }) {
               ? items.map(({ id, src, name, link }) => (
                   <a key={id} href={link || '#'} className="shrink-0 w-40 sm:w-48 md:w-56 lg:w-64 flex flex-col items-center space-y-2">
                     <div className="w-full aspect-square bg-gray-100 overflow-hidden rounded-xl">
-                      <img src={src} alt={name||''} className="w-full h-full object-cover" />
+                     <img src={`data:image/jpeg;base64,${src}`} alt={name || ''} className="w-full h-full object-cover"/>
                     </div>
                     {name && (
                       <div className="text-center text-sm sm:text-base md:text-lg text-gray-800">
