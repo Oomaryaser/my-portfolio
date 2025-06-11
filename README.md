@@ -1,8 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+This project uses [Next.js](https://nextjs.org) and stores data on
+[Supabase](https://supabase.com). Images are saved in a public storage bucket so
+large binaries do not bloat the database. Only the image URLs are kept in the
+tables which keeps queries fast and efficient.
 
 ## Getting Started
 
-First, run the development server:
+### 1. Configure Supabase
+
+1. [Create a free Supabase project](https://app.supabase.com/).
+2. In **Table Editor** create a table called `categories` with these fields:
+   - `id` – integer, primary key, auto increment.
+   - `name` – text, not null.
+   - `cover_url` – text.
+3. Create another table `images` with:
+   - `id` – integer, primary key, auto increment.
+   - `image_url` – text, not null.
+   - `category_id` – integer reference to `categories.id`.
+4. In **Storage** create a bucket named `images` and enable public access.
+5. Grab your project's `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the project
+   settings and create a `.env.local` file:
+
+   ```env
+   SUPABASE_URL=your-project-url
+   SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+### 2. Install dependencies and run the development server
 
 ```bash
 npm run dev
@@ -35,6 +58,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The easiest way to deploy your Next.js app is to use the
+[Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
+Make sure to add the `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment
+variables in your project settings on Vercel.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+Check out the [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying)
+for more details.
