@@ -108,6 +108,18 @@ export default function Dashboard() {
   const [deleteLogoIds, setDeleteLogoIds] = useState(new Set());
   const logoInputRef = useRef();
 
+  /* ————————————————— بيانات السلايدر ————————————————— */
+  const [slides1, setSlides1] = useState([]);
+  const [slides2, setSlides2] = useState([]);
+  const [loadingSlides1, setLoadingSlides1] = useState(true);
+  const [loadingSlides2, setLoadingSlides2] = useState(true);
+  const [slide1File, setSlide1File] = useState(null);
+  const [slide1Preview, setSlide1Preview] = useState('');
+  const [slide1Link, setSlide1Link] = useState('');
+  const [slide2File, setSlide2File] = useState(null);
+  const [slide2Preview, setSlide2Preview] = useState('');
+  const [slide2Link, setSlide2Link] = useState('');
+
   /* ————————————————— جلب الأقسام والصور ————————————————— */
   const fetchCats = async () => {
     setLoadingCats(true);
@@ -173,6 +185,19 @@ export default function Dashboard() {
     }
   };
 
+  const fetchSlides = async slider => {
+    slider === 1 ? setLoadingSlides1(true) : setLoadingSlides2(true);
+    try {
+      const res = await fetch(`/api/slides/${slider}`);
+      const data = await res.json();
+      slider === 1 ? setSlides1(data) : setSlides2(data);
+    } catch {
+      slider === 1 ? setSlides1([]) : setSlides2([]);
+    } finally {
+      slider === 1 ? setLoadingSlides1(false) : setLoadingSlides2(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchCats();
@@ -189,6 +214,11 @@ export default function Dashboard() {
   useEffect(() => {
     fetchLogoImgs();
   }, [logoCatForUpload]);
+
+  useEffect(() => {
+    fetchSlides(1);
+    fetchSlides(2);
+  }, []);
 
   /* ————————————————— دوال الأقسام ————————————————— */
   const handleNewCover = e => {
@@ -464,6 +494,38 @@ export default function Dashboard() {
     fetchLogoImgs();
   };
 
+  const uploadSlide = async slider => {
+    const file = slider === 1 ? slide1File : slide2File;
+    const link = slider === 1 ? slide1Link : slide2Link;
+    if (!file) return setStatus('❗ اختر صورة');
+    const fm = new FormData();
+    fm.append('file', file);
+    fm.append('link', link);
+    try {
+      await fetch(`/api/slides/${slider}`, { method: 'POST', body: fm });
+      setStatus('✅ تم رفع الصورة');
+      if (slider === 1) {
+        setSlide1File(null);
+        setSlide1Preview('');
+        setSlide1Link('');
+        fetchSlides(1);
+      } else {
+        setSlide2File(null);
+        setSlide2Preview('');
+        setSlide2Link('');
+        fetchSlides(2);
+      }
+    } catch {
+      setStatus('❌ خطأ أثناء الرفع');
+    }
+  };
+
+  const deleteSlide = async id => {
+    await fetch(`/api/slides?id=${id}`, { method: 'DELETE' });
+    fetchSlides(1);
+    fetchSlides(2);
+  };
+
   /* ————————————————— JSX ————————————————— */
   if (!authorized) {
     return (
@@ -552,6 +614,30 @@ export default function Dashboard() {
                 </button>
               </li>
             </ul>
+          </li>
+          <li>
+            <button
+              onClick={() => setActiveSection('slide1')}
+              className={`w-full text-right px-4 py-2 rounded-lg transition ${
+                activeSection === 'slide1'
+                  ? 'bg-blue-600 text-white shadow-xl'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              السلايدر الأول
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => setActiveSection('slide2')}
+              className={`w-full text-right px-4 py-2 rounded-lg transition ${
+                activeSection === 'slide2'
+                  ? 'bg-blue-600 text-white shadow-xl'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              السلايدر الثاني
+            </button>
           </li>
         </ul>
       </aside>
@@ -1085,6 +1171,116 @@ export default function Dashboard() {
                 >
                   حذف المحدد ({selectedLogos.size})
                 </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ——— قسم السلايدر الأول ——— */}
+        {activeSection === 'slide1' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-10"
+          >
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">رفع صورة للسلايدر الأول</h2>
+              <div className="flex flex-col md:flex-row gap-4 items-center">
+                <input
+                  type="text"
+                  placeholder="الرابط عند الضغط"
+                  value={slide1Link}
+                  onChange={e => setSlide1Link(e.target.value)}
+                  className="bg-gray-800 border border-gray-600 rounded-lg p-2 flex-1 text-gray-100"
+                />
+                <label className="flex items-center gap-2 cursor-pointer bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 hover:bg-gray-700 text-gray-300">
+                  <FiFile /> اختر صورة
+                  <input type="file" accept="image/*" hidden onChange={e => { setSlide1File(e.target.files[0]); setSlide1Preview(URL.createObjectURL(e.target.files[0])); }} />
+                </label>
+                <button onClick={() => uploadSlide(1)} className="px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg">
+                  <FiUpload className="inline" /> رفع
+                </button>
+              </div>
+              {slide1Preview && (
+                <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                  <img src={slide1Preview} className="absolute inset-0 w-full h-full object-cover rounded-lg" />
+                </div>
+              )}
+            </div>
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">الصور الحالية</h2>
+              {loadingSlides1 ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {[...Array(3)].map((_,i)=><div key={i} className="h-32 bg-gray-200 animate-pulse rounded-lg" />)}
+                </div>
+              ) : slides1.length === 0 ? (
+                <p className="text-gray-400">لا توجد صور.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {slides1.map(s => (
+                    <div key={s.id} className="relative group w-full" style={{ paddingTop: '100%' }}>
+                      <img src={s.src} className="absolute inset-0 w-full h-full object-cover rounded-lg" />
+                      <button onClick={() => deleteSlide(s.id)} className="absolute top-2 right-2 bg-gray-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100">
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ——— قسم السلايدر الثاني ——— */}
+        {activeSection === 'slide2' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-10"
+          >
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">رفع صورة للسلايدر الثاني</h2>
+              <div className="flex flex-col md:flex-row gap-4 items-center">
+                <input
+                  type="text"
+                  placeholder="الرابط عند الضغط"
+                  value={slide2Link}
+                  onChange={e => setSlide2Link(e.target.value)}
+                  className="bg-gray-800 border border-gray-600 rounded-lg p-2 flex-1 text-gray-100"
+                />
+                <label className="flex items-center gap-2 cursor-pointer bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 hover:bg-gray-700 text-gray-300">
+                  <FiFile /> اختر صورة
+                  <input type="file" accept="image/*" hidden onChange={e => { setSlide2File(e.target.files[0]); setSlide2Preview(URL.createObjectURL(e.target.files[0])); }} />
+                </label>
+                <button onClick={() => uploadSlide(2)} className="px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg">
+                  <FiUpload className="inline" /> رفع
+                </button>
+              </div>
+              {slide2Preview && (
+                <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                  <img src={slide2Preview} className="absolute inset-0 w-full h-full object-cover rounded-lg" />
+                </div>
+              )}
+            </div>
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">الصور الحالية</h2>
+              {loadingSlides2 ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {[...Array(3)].map((_,i)=><div key={i} className="h-32 bg-gray-200 animate-pulse rounded-lg" />)}
+                </div>
+              ) : slides2.length === 0 ? (
+                <p className="text-gray-400">لا توجد صور.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {slides2.map(s => (
+                    <div key={s.id} className="relative group w-full" style={{ paddingTop: '100%' }}>
+                      <img src={s.src} className="absolute inset-0 w-full h-full object-cover rounded-lg" />
+                      <button onClick={() => deleteSlide(s.id)} className="absolute top-2 right-2 bg-gray-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100">
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </motion.div>

@@ -50,7 +50,7 @@ function MobileMenu({ isOpen, onClose }) {
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'tween', duration: 0.3 }}
-          className="fixed inset-0 bg-[#121212] bg-opacity-95 p-6 flex flex-col space-y-4"
+          className="fixed inset-0 z-30 bg-[#121212] bg-opacity-95 p-6 flex flex-col space-y-4"
         >
           <button onClick={onClose} className="self-start p-2"><FiX size={24} /></button>
           {tabs.map(label => (<a key={label} href="#" className="block py-3 text-xl font-medium">{label}</a>))}
@@ -61,42 +61,56 @@ function MobileMenu({ isOpen, onClose }) {
 }
 
 // — Single Slider with Dots —
-const slideData = ['اكتشف إبداعي', 'جودة احترافية', 'تجربة فريدة'];
-function Slider() {
+function Slider({ slider }) {
+  const [slides, setSlides] = useState([]);
   const [idx, setIdx] = useState(0);
+
   useEffect(() => {
-    const iv = setInterval(() => setIdx(i => (i + 1) % slideData.length), 3000);
+    fetch(`/api/slides/${slider}`)
+      .then(r => r.json())
+      .then(d => setSlides(Array.isArray(d) ? d : []));
+  }, [slider]);
+
+  useEffect(() => {
+    if (slides.length < 2) return;
+    const iv = setInterval(() => setIdx(i => (i + 1) % slides.length), 4000);
     return () => clearInterval(iv);
-  }, []);
+  }, [slides]);
+
   return (
     <div className="relative w-full">
-      <div className="h-64 md:h-72 lg:h-80 rounded-lg overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900">
-        {slideData.map((txt, i) => (
-          <motion.div
+      <div className="h-64 md:h-72 lg:h-80 rounded-lg overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900 relative">
+        {slides.map((s, i) => (
+          <motion.a
             key={i}
+            href={s.link || '#'}
             initial={{ opacity: 0 }}
             animate={{ opacity: idx === i ? 1 : 0 }}
             transition={{ duration: 0.8 }}
-            className="absolute inset-0 flex items-center justify-center"
+            className="absolute inset-0" 
           >
-            <h1 className="text-3xl md:text-4xl font-bold text-white bg-black bg-opacity-40 px-4 py-2 rounded">
-              {txt}
-            </h1>
-          </motion.div>
+            <img
+              src={s.src}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </motion.a>
         ))}
       </div>
-      {/* Dots */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-6">
-        {slideData.map((_, i) => (
-          <motion.span
-            key={i}
-            animate={{ scale: idx === i ? 1.3 : 1, opacity: idx === i ? 1 : 0.5 }}
-            whileHover={{ scale: 1.2 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-            className="block w-2 h-2 bg-blue-500 rounded-full cursor-pointer"
-          />
-        ))}
-      </div>
+      {slides.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-6">
+          {slides.map((_, i) => (
+            <motion.span
+              key={i}
+              onClick={() => setIdx(i)}
+              animate={{ scale: idx === i ? 1.3 : 1, opacity: idx === i ? 1 : 0.5 }}
+              whileHover={{ scale: 1.2 }}
+              transition={{ type: 'spring', stiffness: 300 }}
+              className="block w-2 h-2 bg-blue-500 rounded-full cursor-pointer"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -105,8 +119,8 @@ function Slider() {
 function DoubleSliders() {
   return (
     <div className="mt-20 mb-8 px-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Slider />
-      <Slider />
+      <Slider slider="1" />
+      <Slider slider="2" />
     </div>
   );
 }
