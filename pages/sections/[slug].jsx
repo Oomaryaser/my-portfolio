@@ -19,7 +19,7 @@ export default function Gallery() {
     if (!slug) return;
     (async () => {
       try {
-        const res = await fetch('/api/categories');
+        const res = await fetch('/api/categories?section=skills');
         const cats = await res.json();
         const target = (Array.isArray(cats) ? cats : []).find(c => slugify(c.name) === slug);
         if (!target) {

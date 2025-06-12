@@ -18,7 +18,7 @@ export default function LogoGallery() {
     if (!slug) return;
     (async () => {
       try {
-        const res = await fetch('/api/logo-categories');
+        const res = await fetch('/api/categories?section=logos');
         const cats = await res.json();
         const target = (Array.isArray(cats) ? cats : []).find(c => slugify(c.name) === slug);
         if (!target) {
@@ -28,7 +28,7 @@ export default function LogoGallery() {
           return;
         }
         setCat(target);
-        const imgRes = await fetch(`/api/logo-categories/${target.id}/images`);
+        const imgRes = await fetch(`/api/categories/${target.id}/images`);
         const list = await imgRes.json();
         setImages(Array.isArray(list) ? list : []);
         setLoaded(Array.isArray(list) ? list.map(() => false) : []);

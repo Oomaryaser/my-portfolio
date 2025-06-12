@@ -112,11 +112,11 @@ export default function Home() {
   const [ll, setLl]         = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  /* fetch categories */
+  /* fetch skill categories */
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/categories');
+        const res = await fetch('/api/categories?section=skills');
         const data = await res.json();
         setSkills(
           Array.isArray(data)
@@ -140,7 +140,7 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/logo-categories');
+        const res = await fetch('/api/categories?section=logos');
         const data = await res.json();
         setLogoCats(
           Array.isArray(data)

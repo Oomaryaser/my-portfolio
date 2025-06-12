@@ -11,7 +11,7 @@ handler.get(async (req, res) => {
   const { id } = req.query;
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, cover_url')
+    .select('id, name, cover_url, section')
     .eq('id', id)
     .single();
 
@@ -20,7 +20,8 @@ handler.get(async (req, res) => {
   res.json({
     id: data.id,
     name: data.name,
-    cover: data.cover_url || ''
+    cover: data.cover_url || '',
+    section: data.section || 'skills'
   });
 });
 
@@ -28,11 +29,12 @@ handler.use(upload.single('cover'));
 
 handler.put(async (req, res) => {
   const { id } = req.query;
-  const { name } = req.body;
+  const { name, section } = req.body;
 
   if (!name) return res.status(400).json({ error: 'name required' });
 
   let fields = { name: name.trim() };
+  if (section) fields.section = section;
   if (req.file) {
     const { buffer, mimetype, originalname } = req.file;
     const fileName = `covers/${Date.now()}-${originalname}`;

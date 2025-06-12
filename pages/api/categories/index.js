@@ -7,11 +7,14 @@ import supabase from '../../../lib/supabase';
 const upload = multer({ storage: multer.memoryStorage() });
 const handler = nextConnect();
 
-handler.get(async (_, res) => {
-  const { data, error } = await supabase
+handler.get(async (req, res) => {
+  const { section } = req.query;
+  let query = supabase
     .from('categories')
-    .select('id, name, cover_url')
+    .select('id, name, cover_url, section')
     .order('id', { ascending: false });
+  if (section) query = query.eq('section', section);
+  const { data, error } = await query;
 
   if (error) {
     console.error(error);
@@ -21,7 +24,8 @@ handler.get(async (_, res) => {
   const cats = (data || []).map(r => ({
     id: r.id,
     name: r.name,
-    cover: r.cover_url || ''
+    cover: r.cover_url || '',
+    section: r.section || 'skills'
   }));
 
   res.json(cats);
@@ -30,7 +34,7 @@ handler.get(async (_, res) => {
 handler.use(upload.single('cover'));
 
 handler.post(async (req, res) => {
-  const { name } = req.body;
+  const { name, section = 'skills' } = req.body;
   if (!name) return res.status(400).json({ error: 'name-required' });
 
   let coverUrl = '';
@@ -52,7 +56,7 @@ handler.post(async (req, res) => {
 
   const { data, error } = await supabase
     .from('categories')
-    .insert([{ name: name.trim(), cover_url: coverUrl }])
+    .insert([{ name: name.trim(), cover_url: coverUrl, section }])
     .select('id')
     .single();
 
