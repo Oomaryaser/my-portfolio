@@ -1,244 +1,156 @@
-// File: pages/index.jsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FiPhoneCall, FiMenu, FiX } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 
-/* — Global CSS + hide vertical scroll + gentle shake keyframes — */
+// — Global Dark Styles —
 const GlobalCSS = () => (
   <style>{`
-    body { overflow:hidden; }
-    .white-scroll::-webkit-scrollbar { height:6px; background:#fff; }
-    .white-scroll::-webkit-scrollbar-thumb { background:#fff; border-radius:3px; }
-    .white-scroll::-webkit-scrollbar-track { background:#fff; }
-    .white-scroll { scrollbar-width:thin; scrollbar-color:#fff #fff; }
-
-    @keyframes shake {
-      0%,100% { transform: translateX(0); }
-      25%,75% { transform: translateX(-1px); }
-      50%     { transform: translateX(1px); }
-    }
-    .shake {
-      animation: shake 1.5s ease-in-out infinite;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Beiruti:wght@400;700&display=swap');
+    body { margin:0; padding:0; font-family:'Beiruti',sans-serif; background:#121212; color:#e0e0e0; direction: rtl; }
+    * { box-sizing: border-box; }
+    a { text-decoration: none; color: inherit; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius:3px; }
   `}</style>
 );
 
-/* — Skeleton for images — */
-const BoxSkel = () => (
-  <div className="
-    w-32 h-32 sm:w-40 sm:h-40 md:w-56 md:h-56 lg:w-64 lg:h-64
-    rounded-2xl bg-gray-200 animate-pulse shrink-0
-  "/>
-);
-
-/* — Skeleton for side cards — */
-const CardSkel = ({ tall }) => (
-  <div className={`
-    w-full
-    ${tall ? 'h-48 sm:h-56 md:h-72 lg:h-[22rem]' : 'h-24 sm:h-32 md:h-44 lg:h-52'}
-    bg-gray-200 rounded-2xl animate-pulse
-  `}/>
-);
-
-/* — Horizontal scroll strip — */
-function Strip({ title, items, loading }) {
-  const ref = useRef(null);
-  const dragging = useRef(false);
-  const start = useRef({ x: 0, scroll: 0 });
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const onDown = e => {
-      dragging.current = true;
-      start.current = { x: e.clientX, scroll: el.scrollLeft };
-      el.setPointerCapture(e.pointerId);
-    };
-    const onMove = e => {
-      if (dragging.current) {
-        el.scrollLeft = start.current.scroll - (e.clientX - start.current.x);
-      }
-    };
-    const onUp = e => {
-      dragging.current = false;
-      el.releasePointerCapture(e.pointerId);
-    };
-    el.addEventListener('pointerdown', onDown);
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', onUp);
-    el.addEventListener('pointercancel', onUp);
-    return () => {
-      el.removeEventListener('pointerdown', onDown);
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerup', onUp);
-      el.removeEventListener('pointercancel', onUp);
-    };
-  }, []);
-
+// — Header —
+function Header({ onMenu }) {
+  const tabs = ['التصميم', 'معرضي'];
   return (
-    <section className="space-y-4">
-      <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-right">{title}</h2>
-      <div
-        ref={ref}
-        dir="rtl"
-        className="white-scroll overflow-x-auto snap-x snap-mandatory cursor-grab pb-2"
-      >
-        <div className="flex gap-4 w-max">
-          {loading
-            ? Array.from({ length: 6 }).map((_, i) => <BoxSkel key={i} />)
-            : items.length
-              ? items.map(({ id, src, name, link }) => (
-                  <a key={id} href={link || '#'} className="shrink-0 w-40 sm:w-48 md:w-56 lg:w-64 flex flex-col items-center space-y-2">
-                    <div className="w-full aspect-square bg-gray-100 overflow-hidden rounded-xl">
-                     <img src={src} alt={name || ''} className="w-full h-full object-cover"/>
-                    </div>
-                    {name && (
-                      <div className="text-center text-sm sm:text-base md:text-lg text-gray-800">
-                        {name}
-                      </div>
-                    )}
-                  </a>
-                ))
-              : <p className="text-gray-500 px-4">لا توجد عناصر</p>}
-        </div>
+    <motion.header
+      initial={{ y: -50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="fixed top-0 inset-x-0 z-20 bg-[#1f1f1f] px-6 py-4 flex items-center justify-between"
+    >
+      <span className="text-2xl font-bold">مرئيات عمر</span>
+      <div className="flex items-center space-x-4 space-x-reverse">
+        <nav className="hidden md:flex space-x-6 space-x-reverse">
+          {tabs.map(label => (
+            <a key={label} href="#" className="relative px-2 py-1 font-medium hover:text-white">
+              {label}
+            </a>
+          ))}
+        </nav>
+        <button onClick={onMenu} className="md:hidden p-2"><FiMenu size={24} /></button>
       </div>
-    </section>
+    </motion.header>
   );
 }
 
+// — Mobile Menu —
+function MobileMenu({ isOpen, onClose }) {
+  const tabs = ['التصميم','معرضي'];
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'tween', duration: 0.3 }}
+          className="fixed inset-0 bg-[#121212] bg-opacity-95 p-6 flex flex-col space-y-4"
+        >
+          <button onClick={onClose} className="self-start p-2"><FiX size={24} /></button>
+          {tabs.map(label => (<a key={label} href="#" className="block py-3 text-xl font-medium">{label}</a>))}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// — Single Slider with Dots —
+const slideData = ['اكتشف إبداعي', 'جودة احترافية', 'تجربة فريدة'];
+function Slider() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setIdx(i => (i + 1) % slideData.length), 3000);
+    return () => clearInterval(iv);
+  }, []);
+  return (
+    <div className="relative w-full">
+      <div className="h-64 md:h-72 lg:h-80 rounded-lg overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900">
+        {slideData.map((txt, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: idx === i ? 1 : 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <h1 className="text-3xl md:text-4xl font-bold text-white bg-black bg-opacity-40 px-4 py-2 rounded">
+              {txt}
+            </h1>
+          </motion.div>
+        ))}
+      </div>
+      {/* Dots */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-6">
+        {slideData.map((_, i) => (
+          <motion.span
+            key={i}
+            animate={{ scale: idx === i ? 1.3 : 1, opacity: idx === i ? 1 : 0.5 }}
+            whileHover={{ scale: 1.2 }}
+            transition={{ type: 'spring', stiffness: 300 }}
+            className="block w-2 h-2 bg-blue-500 rounded-full cursor-pointer"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// — Two Sliders Side by Side —
+function DoubleSliders() {
+  return (
+    <div className="mt-20 mb-8 px-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Slider />
+      <Slider />
+    </div>
+  );
+}
+
+// — Section with Dark Cards —
+function Section({ title, items = [], loading }) {
+  return (
+    <div className="px-6 mb-8">
+      <h2 className="text-xl font-semibold mb-4 text-right">{title}</h2>
+      <div className="flex overflow-x-auto space-x-4 space-x-reverse pb-2">
+        {loading
+          ? Array(4).fill(0).map((_,i)=><div key={i} className="w-48 h-48 bg-gray-700 animate-pulse rounded-lg"/>):
+          items.map(x=>(
+            <a key={x.id} href={x.link} className="w-48 h-48 bg-[#1f1f1f] rounded-lg overflow-hidden flex-shrink-0">
+              <img src={x.src} alt={x.name} className="w-full h-full object-cover" />
+              <div className="p-2 text-sm text-gray-300 text-center">{x.name}</div>
+            </a>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// — Main Component —
 export default function Home() {
-  const [skills, setSkills] = useState([]);
-  const [logos,  setLogos]  = useState([]);
-  const [ls, setLs]         = useState(true);
-  const [ll, setLl]         = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [skills,setSkills]=useState([]);
+  const [logos,setLogos]=useState([]);
+  const [ldS,setLdS]=useState(true);
+  const [ldL,setLdL]=useState(true);
+  const [menuOpen,setMenuOpen]=useState(false);
 
-  /* fetch categories */
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/categories');
-        const data = await res.json();
-        setSkills(
-          Array.isArray(data)
-            ? data.filter(c => c.cover).map(c => ({
-                id: c.id,
-                src: c.cover,
-                name: c.name,
-                link: `/gallery/${c.id}`
-              }))
-            : []
-        );
-      } catch {
-        setSkills([]);
-      } finally {
-        setLs(false);
-      }
-    })();
-  }, []);
-
-  /* fetch images */
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/images');
-        const data = await res.json();
-        setLogos(Array.isArray(data) ? data : []);
-      } catch {
-        setLogos([]);
-      } finally {
-        setLl(false);
-      }
-    })();
-  }, []);
+  useEffect(()=>{
+    fetch('/api/categories').then(r=>r.json()).then(d=>setSkills(Array.isArray(d)?d.map(c=>({id:c.id,src:c.cover,name:c.name,link:`/gallery/${c.id}`})):[])).finally(()=>setLdS(false));
+    fetch('/api/images').then(r=>r.json()).then(d=>setLogos(Array.isArray(d)?d:[])).finally(()=>setLdL(false));
+  },[]);
 
   return (
-    <div dir="rtl" className="font-[Beiruti] h-screen flex flex-col bg-white text-gray-900">
+    <div className="min-h-screen">
       <GlobalCSS />
-
-      {/* Header with mobile sidebar toggle */}
-      <header className="flex-none bg-black text-white">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center text-right space-x-2 rtl:space-x-reverse">
-            <span className="text-2xl sm:text-3xl md:text-4xl font-bold">مرئـــيات</span>
-            <span className="text-lg sm:text-xl md:text-2xl font-medium">عُمــــر</span>
-          </div>
-
-          {/* Desktop nav + button */}
-          <nav className="hidden md:flex items-center space-x-6 text-lg text-white rtl:space-x-reverse">
-            <a href="#" className="hover:text-gray-200">اطلب تصميمك</a>
-            <a href="#" className="hover:text-gray-200">اتصل بعمر مباشرة</a>
-            <a href="#" className="hover:text-gray-200">اسأل سؤالك</a>
-            <a href="#" className="hover:text-gray-200">حسابات عمر</a>
-            <a href="#" className="hover:text-gray-200">نبذة عن عمر</a>
-            <button className="px-6 py-2 bg-black text-white font-medium rounded-full shadow hover:opacity-90 active:opacity-80 transition">
-              تواصل معي
-            </button>
-          </nav>
-
-          {/* Mobile icons */}
-          <div className="flex md:hidden items-center space-x-4 rtl:space-x-reverse">
-            <a href="tel:+123456789" className="p-3 bg-black text-white rounded-full shake text-xl hover:opacity-90 transition">
-              <FiPhoneCall />
-            </a>
-            <button onClick={() => setMenuOpen(true)} className="text-2xl text-white hover:text-gray-200">
-              <FiMenu />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile sidebar with smooth slide */}
-        <aside className="fixed inset-0 z-50 flex pointer-events-none">
-          {/* Overlay */}
-          <div
-            className={`fixed inset-0 bg-black/30 transition-opacity duration-300 ${menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`}
-            onClick={() => setMenuOpen(false)}
-          />
-          {/* Panel */}
-          <div className={`
-            relative w-64 bg-white shadow-lg p-6 flex flex-col space-y-6
-            transform transition-transform duration-300 ease-in-out
-            ${menuOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full'}
-          `}>
-            <button
-              className="absolute top-4 left-4 text-2xl text-gray-700 hover:text-gray-900"
-              onClick={() => setMenuOpen(false)}
-            >
-              <FiX />
-            </button>
-            <a href="#" className="text-lg font-medium hover:text-black">اطلب تصميمك</a>
-            <a href="#" className="text-lg font-medium hover:text-black">اتصل بعمر مباشرة</a>
-            <a href="#" className="text-lg font-medium hover:text-black">اسأل سؤالك</a>
-            <a href="#" className="text-lg font-medium hover:text-black">حسابات عمر</a>
-            <a href="#" className="text-lg font-medium hover:text-black">نبذة عن عمر</a>
-            <button className="mt-auto px-6 py-2 bg-black text-white font-medium rounded-full shadow hover:opacity-90 active:opacity-80 transition">
-              تواصل معي
-            </button>
-          </div>
-        </aside>
-      </header>
-
-      {/* Content: strips & side cards */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <main className="flex-1 overflow-hidden px-6 lg:px-12 py-8 space-y-8">
-          <Strip title="اقسام مهاراتي" items={skills} loading={ls}/>
-          <Strip title="شعارات بنيتها"  items={logos}  loading={ll}/>
-        </main>
-        <aside className="w-full md:w-2/5 xl:w-[26rem] flex flex-col px-6 lg:px-12 py-8 space-y-8 overflow-hidden flex-none">
-          <section className="space-y-4">
-            <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-right">آخر أعمالي</h3>
-            {ll ? <CardSkel tall={false}/> : (
-              <div className="w-full h-24 sm:h-32 md:h-44 lg:h-52 xl:h-64 rounded-2xl bg-gray-100 overflow-hidden"/>
-            )}
-          </section>
-          <section className="space-y-4 flex-1 flex flex-col">
-            <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-right">أهم أعمالي</h3>
-            {ll ? <CardSkel tall/> : (
-              <div className="w-full flex-1 rounded-2xl bg-gray-100 overflow-hidden"/>
-            )}
-          </section>
-        </aside>
-      </div>
+      <Header onMenu={()=>setMenuOpen(true)} />
+      <MobileMenu isOpen={menuOpen} onClose={()=>setMenuOpen(false)} />
+      <DoubleSliders />
+      <Section title="أقسام مهاراتي" items={skills} loading={ldS} />
+      <Section title="شعارات بنيتها" items={logos} loading={ldL} />
     </div>
   );
 }
