@@ -266,6 +266,14 @@ export default function Dashboard() {
               رفع الصور
             </button>
           </li>
+          <li>
+            <a
+              href="/dashboard-logos"
+              className="block text-right px-4 py-2 rounded-lg transition text-gray-700 hover:bg-gray-100"
+            >
+              شعارات بنيتها
+            </a>
+          </li>
         </ul>
       </aside>
       {sidebarOpen && (

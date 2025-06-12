@@ -44,7 +44,7 @@ handler.post(async (req, res) => {
     } = supabase.storage.from('images').getPublicUrl(fileName);
 
     const { error } = await supabase
-      .from('images')
+      .from('logo_images')
       .insert([{ image_url: publicUrl, category_id: id }]);
 
     if (error) throw error;
