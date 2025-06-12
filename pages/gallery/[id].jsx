@@ -1,11 +1,64 @@
 // File: components/Gallery.jsx
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { useRouter } from 'next/router';
+"use client";
+import React, { useEffect, useState } from "react";
+import Head from "next/head";
+import { motion } from "framer-motion";
+import { useRouter } from "next/router";
+import { FiArrowRight } from "react-icons/fi";
 
+/* ——— Global Styles ——— */
+const GlobalCSS = () => (
+  <Head>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style
+      dangerouslySetInnerHTML={{
+        __html: `
+        body{margin:0;padding:0;font-family:'Beiruti',sans-serif;background:#121212;color:#e0e0e0;direction:rtl}
+        *{box-sizing:border-box}
+        a{text-decoration:none;color:inherit}
+        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:3px}
+      `,
+      }}
+    />
+  </Head>
+);
+
+/* ——— Header ——— */
+const Header = ({ title }) => (
+  <motion.header
+    initial={{ y: -50, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    transition={{ duration: 0.5 }}
+    className="fixed top-0 inset-x-0 z-40 bg-[#1f1f1f]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between shadow-lg"
+  >
+    <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate">
+      {title}
+    </h1>
+    <a
+      href="/"
+      className="flex items-center gap-1 text-sm sm:text-base hover:text-white transition-colors"
+    >
+      العودة <FiArrowRight size={18} className="mt-0.5" />
+    </a>
+  </motion.header>
+);
+
+/* ——— Helpers ——— */
+const skel =
+  "rounded-xl bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 bg-[length:200%_100%] animate-[loading_1.2s_ease-in-out_infinite]";
+const low = (src) =>
+  src.startsWith("data:")
+    ? src
+    : `${src}${src.includes("?") ? "&" : "?"}w=480&q=40`;
+
+/* ——— Gallery Page ——— */
 export default function Gallery() {
-  const router = useRouter();
-  const { id } = router.query;
+  const { query } = useRouter();
+  const { id } = query;
 
   const [cat, setCat] = useState(null);
   const [images, setImages] = useState([]);
@@ -20,72 +73,95 @@ export default function Gallery() {
         setCat(await catRes.json());
 
         const imgRes = await fetch(`/api/categories/${id}/images`);
-        const list   = await imgRes.json();
+        const list = await imgRes.json();
         setImages(Array.isArray(list) ? list : []);
         setLoaded(Array.isArray(list) ? list.map(() => false) : []);
       } catch {
-        setImages([]); setLoaded([]);
-      } finally { setLoading(false); }
+        setImages([]);
+        setLoaded([]);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [id]);
 
-  const markLoaded = i => setLoaded(p => { const a=[...p]; a[i]=true; return a; });
+  const markLoaded = (i) =>
+    setLoaded((prev) => {
+      const copy = [...prev];
+      copy[i] = true;
+      return copy;
+    });
 
-  const container = { hidden:{opacity:0}, visible:{opacity:1, transition:{staggerChildren:.06}} };
-  const item      = { hidden:{opacity:0, y:20}, visible:{opacity:1, y:0} };
-
-  const skel = `rounded-xl bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-[loading_1.2s_ease-in-out_infinite]`;
-const low  = src => src.startsWith('data:')
-  ? src
-  : `${src}${src.includes('?') ? '&' : '?'}w=480&q=40`;
-
-  const headerCls =
-    "fixed top-4 inset-x-4 sm:inset-x-6 md:inset-x-10 lg:inset-x-16 z-50 flex justify-between items-center " +
-    "px-5 py-3 md:py-4 bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-white/40 text-gray-900";
+  /* ——— Motion variants ——— */
+  const container = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.03 } },
+  };
+  const item = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: { opacity: 1, y: 0, scale: 1 },
+  };
 
   return (
-    <div dir="rtl" className="font-[Beiruti] flex flex-col min-h-screen bg-white text-gray-900">
-      <header className={headerCls}>
-        <h1 className="font-bold text-base sm:text-lg md:text-xl lg:text-2xl">{cat ? cat.name : '...'}</h1>
-        <a href="/" className="hover:underline text-sm sm:text-base">العودة</a>
-      </header>
+    <div dir="rtl" className="flex flex-col min-h-screen bg-[#121212] text-[#e0e0e0]">
+      <GlobalCSS />
+      <Header title={cat ? cat.name : "..."} />
 
-      <main className="flex-1 w-full max-w-none p-4 pt-24">
+      <main className="flex-1 pt-28 pb-16 px-6 sm:px-10">
+        {/* Skeleton */}
         {loading && (
-          <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} style={{ height: 240 }} className={skel} />
+          <div className="columns-2 sm:columns-3 lg:columns-4 gap-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className={`${skel} w-full h-60 mb-4 rounded-xl`} />
             ))}
           </div>
         )}
 
+        {/* Images */}
         {!loading && images.length > 0 && (
-          <motion.section variants={container} initial="hidden" animate="visible"
-                          className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+          <motion.section
+            variants={container}
+            initial="hidden"
+            animate="visible"
+            /* Tailwind columns -> CSS multi-column */
+            className="columns-2 sm:columns-3 lg:columns-4 gap-4"
+          >
             {images.map((img, i) => (
-              <motion.div key={img.id} variants={item}
-                          className="break-inside-avoid rounded-xl overflow-hidden relative group">
+              <motion.div
+                key={img.id}
+                variants={item}
+                /* ‎`break-inside-avoid` يمنع انقسام العنصر بين عمودين */
+                className="relative w-full mb-4 rounded-xl overflow-hidden shadow-lg break-inside-avoid"
+              >
                 {!loaded[i] && <div className={`absolute inset-0 ${skel}`} />}
                 <motion.img
-                  src={low(img.src)} srcSet={`${img.src} 2x`} alt=""
-                  className="w-full h-auto rounded-xl shadow-md transition-transform"
-                  style={{ filter: loaded[i] ? 'blur(0px)' : 'blur(20px)', transition:'filter .4s' }}
+                  src={low(img.src)}
+                  srcSet={`${img.src} 2x`}
+                  alt=""
                   onLoad={() => markLoaded(i)}
-                  initial={{ scale:1 }} whileHover={{ scale:1.04 }}
-                  transition={{ type:'spring', stiffness:260 }} loading="lazy"
+                  className="w-full h-auto object-contain transition-transform duration-300 ease-out"
+                  style={{ filter: loaded[i] ? "blur(0)" : "blur(20px)" }}
+                  initial={{ scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 240, damping: 20 }}
+                  loading="lazy"
                 />
               </motion.div>
             ))}
           </motion.section>
         )}
 
+        {/* Empty state */}
         {!loading && images.length === 0 && (
-          <p className="text-center text-gray-500 mt-20">لا توجد صور</p>
+          <p className="text-center text-gray-400 mt-20">لا توجد صور</p>
         )}
       </main>
 
       <style jsx>{`
-        @keyframes loading { 0%,100%{background-position:200% 0} 50%{background-position:0 0} }
+        @keyframes loading {
+          0%,100% {background-position: 200% 0}
+          50% {background-position: 0 0}
+        }
       `}</style>
     </div>
   );
