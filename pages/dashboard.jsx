@@ -31,6 +31,19 @@ export default function Dashboard() {
   const [editCoverPreview, setEditCoverPreview] = useState('');
   const [saving, setSaving] = useState(false);
 
+  /* ————————————————— بيانات شعارات بنيتها ————————————————— */
+  const [logoCats, setLogoCats] = useState([]);
+  const [loadingLogoCats, setLoadingLogoCats] = useState(true);
+  const [newLogoName, setNewLogoName] = useState('');
+  const [newLogoCover, setNewLogoCover] = useState(null);
+  const [newLogoCoverPreview, setNewLogoCoverPreview] = useState('');
+  const [creatingLogo, setCreatingLogo] = useState(false);
+  const [editLogoId, setEditLogoId] = useState(null);
+  const [editLogoName, setEditLogoName] = useState('');
+  const [editLogoCover, setEditLogoCover] = useState(null);
+  const [editLogoCoverPreview, setEditLogoCoverPreview] = useState('');
+  const [savingLogo, setSavingLogo] = useState(false);
+
   /* ————————————————— بيانات رفع الصور ————————————————— */
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -62,6 +75,19 @@ export default function Dashboard() {
     }
   };
 
+  const fetchLogoCats = async () => {
+    setLoadingLogoCats(true);
+    try {
+      const res = await fetch('/api/logo-categories');
+      const data = await res.json();
+      setLogoCats(Array.isArray(data) ? data : []);
+    } catch {
+      setLogoCats([]);
+    } finally {
+      setLoadingLogoCats(false);
+    }
+  };
+
   const fetchImgs = async () => {
     if (!categoryForUpload) return setImages([]);
     setLoadingImgs(true);
@@ -81,6 +107,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchCats();
+  }, []);
+
+  useEffect(() => {
+    fetchLogoCats();
   }, []);
 
   useEffect(() => {
@@ -157,6 +187,81 @@ export default function Dashboard() {
       await fetch(`/api/categories/${id}`, { method: 'DELETE' });
       setStatus('🗑️ تم حذف القسم');
       fetchCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الحذف');
+    }
+  };
+
+  /* ————————————————— دوال شعارات بنيتها ————————————————— */
+  const handleNewLogoCover = e => {
+    const f = e.target.files[0];
+    setNewLogoCover(f);
+    setNewLogoCoverPreview(URL.createObjectURL(f));
+  };
+
+  const createLogoCat = async () => {
+    if (!newLogoName.trim()) return setStatus('❗ أدخل اسم القسم');
+    setCreatingLogo(true);
+    try {
+      const fm = new FormData();
+      fm.append('name', newLogoName.trim());
+      if (newLogoCover) fm.append('cover', newLogoCover);
+      await fetch('/api/logo-categories', { method: 'POST', body: fm });
+      setStatus('✅ تم إنشاء القسم');
+      setNewLogoName('');
+      setNewLogoCover(null);
+      setNewLogoCoverPreview('');
+      fetchLogoCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الإنشاء');
+    } finally {
+      setCreatingLogo(false);
+    }
+  };
+
+  const startLogoEdit = c => {
+    setEditLogoId(c.id);
+    setEditLogoName(c.name);
+    setEditLogoCoverPreview(c.cover);
+  };
+
+  const handleEditLogoCover = e => {
+    const f = e.target.files[0];
+    setEditLogoCover(f);
+    setEditLogoCoverPreview(URL.createObjectURL(f));
+  };
+
+  const saveLogoEdit = async () => {
+    if (!editLogoName.trim()) return setStatus('❗ أدخل اسم القسم');
+    setSavingLogo(true);
+    try {
+      const fm = new FormData();
+      fm.append('name', editLogoName.trim());
+      if (editLogoCover) fm.append('cover', editLogoCover);
+      await fetch(`/api/logo-categories/${editLogoId}`, { method: 'PUT', body: fm });
+      setStatus('✅ تم حفظ التعديل');
+      setEditLogoId(null);
+      fetchLogoCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الحفظ');
+    } finally {
+      setSavingLogo(false);
+    }
+  };
+
+  const cancelLogoEdit = () => {
+    setEditLogoId(null);
+    setEditLogoName('');
+    setEditLogoCover(null);
+    setEditLogoCoverPreview('');
+  };
+
+  const deleteLogoCat = async id => {
+    if (!confirm('تأكيد حذف القسم؟')) return;
+    try {
+      await fetch(`/api/logo-categories/${id}`, { method: 'DELETE' });
+      setStatus('🗑️ تم حذف القسم');
+      fetchLogoCats();
     } catch {
       setStatus('❌ خطأ أثناء الحذف');
     }
@@ -252,6 +357,18 @@ export default function Dashboard() {
               }`}
             >
               أقسام مهاراتي
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => setActiveSection('logo-cats')}
+              className={`w-full text-right px-4 py-2 rounded-lg transition ${
+                activeSection === 'logo-cats'
+                  ? 'bg-black text-white shadow-xl'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              شعارات بنيتها
             </button>
           </li>
           <li>
@@ -405,6 +522,138 @@ export default function Dashboard() {
                             </button>
                             <button
                               onClick={() => deleteCat(c.id)}
+                              className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+        </motion.div>
+      )}
+
+        {/* ——— قسم شعارات بنيتها ——— */}
+        {activeSection === 'logo-cats' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-10"
+          >
+            {/* إنشاء قسم جديد */}
+            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">إنشاء قسم جديد</h2>
+              <div className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="text"
+                  placeholder="اسم القسم"
+                  value={newLogoName}
+                  onChange={e => setNewLogoName(e.target.value)}
+                  className="bg-gray-100 border border-gray-300 rounded-lg p-2 flex-1 text-gray-900 placeholder-gray-500"
+                />
+                <label className="flex items-center gap-2 cursor-pointer text-gray-600">
+                  <FiFile /> غلاف
+                  <input type="file" accept="image/*" hidden onChange={handleNewLogoCover} />
+                </label>
+                <button
+                  onClick={createLogoCat}
+                  disabled={creatingLogo}
+                  className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg shadow"
+                >
+                  <FiPlus className="inline-block" /> إنشاء
+                </button>
+              </div>
+              {newLogoCoverPreview && (
+                <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                  <img
+                    src={newLogoCoverPreview}
+                    alt="cover preview"
+                    className="absolute inset-0 w-full h-full object-cover rounded-lg shadow-inner"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* الأقسام الحالية */}
+            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">الأقسام الحالية</h2>
+              {loadingLogoCats ? (
+                <div className="flex gap-4">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="w-32 h-32 bg-gray-200 animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : logoCats.length === 0 ? (
+                <p className="text-gray-500">لا توجد أقسام.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {logoCats.map(c => (
+                    <div
+                      key={c.id}
+                      className="bg-white border border-gray-300 rounded-2xl p-5 relative shadow-md hover:shadow-lg transition"
+                    >
+                      {editLogoId === c.id ? (
+                        <>
+                          <input
+                            type="text"
+                            value={editLogoName}
+                            onChange={e => setEditLogoName(e.target.value)}
+                            className="w-full mb-2 p-2 rounded-lg bg-gray-100 text-gray-900 border border-gray-300"
+                          />
+                          <label className="flex items-center gap-2 mb-2 cursor-pointer text-gray-600">
+                            <FiFile /> غلاف جديد
+                            <input type="file" accept="image/*" hidden onChange={handleEditLogoCover} />
+                          </label>
+                          {editLogoCoverPreview && (
+                            <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                              <img
+                                src={editLogoCoverPreview}
+                                alt="edit cover preview"
+                                className="absolute inset-0 w-full h-full object-cover rounded-lg mb-2"
+                              />
+                            </div>
+                          )}
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={saveLogoEdit}
+                              disabled={savingLogo}
+                              className="px-3 py-1 bg-black hover:bg-gray-800 rounded-lg text-white"
+                            >
+                              حفظ
+                            </button>
+                            <button
+                              onClick={cancelLogoEdit}
+                              className="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded-lg text-white"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {c.cover && (
+                            <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                              <img
+                                src={c.cover}
+                                alt={c.name}
+                                className="absolute inset-0 w-full h-full object-cover rounded-lg mb-3 border-2 border-gray-700"
+                              />
+                            </div>
+                          )}
+                          <p className="font-medium mb-4 text-gray-800">{c.name}</p>
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => startLogoEdit(c)}
+                              className="p-2 bg-black hover:bg-gray-800 rounded-lg text-white"
+                            >
+                              <FiEdit />
+                            </button>
+                            <button
+                              onClick={() => deleteLogoCat(c.id)}
                               className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white"
                             >
                               <FiTrash2 />

@@ -107,7 +107,7 @@ function Strip({ title, items, loading }) {
 
 export default function Home() {
   const [skills, setSkills] = useState([]);
-  const [logos,  setLogos]  = useState([]);
+  const [logoCats, setLogoCats] = useState([]);
   const [ls, setLs]         = useState(true);
   const [ll, setLl]         = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -124,7 +124,7 @@ export default function Home() {
                 id: c.id,
                 src: c.cover,
                 name: c.name,
-                link: `/gallery/${c.id}`
+                link: `/sections/${encodeURIComponent(c.name.trim().replace(/\s+/g, '-'))}`
               }))
             : []
         );
@@ -136,15 +136,24 @@ export default function Home() {
     })();
   }, []);
 
-  /* fetch images */
+  /* fetch logo sections */
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/images');
+        const res = await fetch('/api/logo-categories');
         const data = await res.json();
-        setLogos(Array.isArray(data) ? data : []);
+        setLogoCats(
+          Array.isArray(data)
+            ? data.filter(c => c.cover).map(c => ({
+                id: c.id,
+                src: c.cover,
+                name: c.name,
+                link: `/logo/${encodeURIComponent(c.name.trim().replace(/\s+/g, '-'))}`
+              }))
+            : []
+        );
       } catch {
-        setLogos([]);
+        setLogoCats([]);
       } finally {
         setLl(false);
       }
@@ -156,8 +165,8 @@ export default function Home() {
       <GlobalCSS />
 
       {/* Header with mobile sidebar toggle */}
-      <header className="flex-none bg-black text-white">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex items-center justify-between">
+      <header className="flex-none fixed top-4 inset-x-4 sm:inset-x-6 md:inset-x-10 lg:inset-x-16 z-50 bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-white/40 text-gray-900">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 py-3 md:py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center text-right space-x-2 rtl:space-x-reverse">
             <span className="text-2xl sm:text-3xl md:text-4xl font-bold">مرئـــيات</span>
@@ -165,12 +174,12 @@ export default function Home() {
           </div>
 
           {/* Desktop nav + button */}
-          <nav className="hidden md:flex items-center space-x-6 text-lg text-white rtl:space-x-reverse">
-            <a href="#" className="hover:text-gray-200">اطلب تصميمك</a>
-            <a href="#" className="hover:text-gray-200">اتصل بعمر مباشرة</a>
-            <a href="#" className="hover:text-gray-200">اسأل سؤالك</a>
-            <a href="#" className="hover:text-gray-200">حسابات عمر</a>
-            <a href="#" className="hover:text-gray-200">نبذة عن عمر</a>
+          <nav className="hidden md:flex items-center space-x-6 text-lg text-gray-900 rtl:space-x-reverse">
+            <a href="#" className="hover:text-gray-600">اطلب تصميمك</a>
+            <a href="#" className="hover:text-gray-600">اتصل بعمر مباشرة</a>
+            <a href="#" className="hover:text-gray-600">اسأل سؤالك</a>
+            <a href="#" className="hover:text-gray-600">حسابات عمر</a>
+            <a href="#" className="hover:text-gray-600">نبذة عن عمر</a>
             <button className="px-6 py-2 bg-black text-white font-medium rounded-full shadow hover:opacity-90 active:opacity-80 transition">
               تواصل معي
             </button>
@@ -181,7 +190,7 @@ export default function Home() {
             <a href="tel:+123456789" className="p-3 bg-black text-white rounded-full shake text-xl hover:opacity-90 transition">
               <FiPhoneCall />
             </a>
-            <button onClick={() => setMenuOpen(true)} className="text-2xl text-white hover:text-gray-200">
+            <button onClick={() => setMenuOpen(true)} className="text-2xl text-gray-900 hover:text-gray-600">
               <FiMenu />
             </button>
           </div>
@@ -219,10 +228,10 @@ export default function Home() {
       </header>
 
       {/* Content: strips & side cards */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden pt-24">
         <main className="flex-1 overflow-hidden px-6 lg:px-12 py-8 space-y-8">
           <Strip title="اقسام مهاراتي" items={skills} loading={ls}/>
-          <Strip title="شعارات بنيتها"  items={logos}  loading={ll}/>
+          <Strip title="شعارات بنيتها"  items={logoCats}  loading={ll}/>
         </main>
         <aside className="w-full md:w-2/5 xl:w-[26rem] flex flex-col px-6 lg:px-12 py-8 space-y-8 overflow-hidden flex-none">
           <section className="space-y-4">
