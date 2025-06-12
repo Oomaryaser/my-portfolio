@@ -107,7 +107,7 @@ function Strip({ title, items, loading }) {
 
 export default function Home() {
   const [skills, setSkills] = useState([]);
-  const [logos,  setLogos]  = useState([]);
+  const [logoCats, setLogoCats] = useState([]);
   const [ls, setLs]         = useState(true);
   const [ll, setLl]         = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -136,15 +136,24 @@ export default function Home() {
     })();
   }, []);
 
-  /* fetch images */
+  /* fetch logo sections */
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/images');
+        const res = await fetch('/api/logo-categories');
         const data = await res.json();
-        setLogos(Array.isArray(data) ? data : []);
+        setLogoCats(
+          Array.isArray(data)
+            ? data.filter(c => c.cover).map(c => ({
+                id: c.id,
+                src: c.cover,
+                name: c.name,
+                link: `/logo/${encodeURIComponent(c.name.trim().replace(/\s+/g, '-'))}`
+              }))
+            : []
+        );
       } catch {
-        setLogos([]);
+        setLogoCats([]);
       } finally {
         setLl(false);
       }
@@ -222,7 +231,7 @@ export default function Home() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden pt-24">
         <main className="flex-1 overflow-hidden px-6 lg:px-12 py-8 space-y-8">
           <Strip title="اقسام مهاراتي" items={skills} loading={ls}/>
-          <Strip title="شعارات بنيتها"  items={logos}  loading={ll}/>
+          <Strip title="شعارات بنيتها"  items={logoCats}  loading={ll}/>
         </main>
         <aside className="w-full md:w-2/5 xl:w-[26rem] flex flex-col px-6 lg:px-12 py-8 space-y-8 overflow-hidden flex-none">
           <section className="space-y-4">
