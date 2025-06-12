@@ -1,6 +1,19 @@
 // File: pages/dashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+
+const HASH = 'c90142696762be2f4632c18382315ab39e20a41e997cd8a41502aeafcfae49fe';
+
+const GlobalCSS = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Beiruti:wght@400;700&display=swap');
+    body { margin:0; padding:0; font-family:'Beiruti',sans-serif; background:#121212; color:#e0e0e0; direction: rtl; }
+    * { box-sizing: border-box; }
+    a { text-decoration: none; color: inherit; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.2); border-radius:3px; }
+  `}</style>
+);
 import {
   FiUpload,
   FiFile,
@@ -17,6 +30,30 @@ import {
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState('categories');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [authorized, setAuthorized] = useState(false);
+  const [pw, setPw] = useState('');
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('dash-auth');
+    if (token === HASH) setAuthorized(true);
+  }, []);
+
+  const hash = async str => {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  };
+
+  const login = async () => {
+    const h = await hash(pw);
+    if (h === HASH) {
+      localStorage.setItem('dash-auth', HASH);
+      setAuthorized(true);
+    } else {
+      setErr('رمز خاطئ');
+    }
+  };
 
   /* ————————————————— بيانات الأقسام ————————————————— */
   const [categories, setCategories] = useState([]);
@@ -44,6 +81,32 @@ export default function Dashboard() {
   const [deleteIds, setDeleteIds] = useState(new Set());
   const inputRef = useRef();
   const [status, setStatus] = useState('');
+
+  /* ————————————————— بيانات أقسام الشعارات ————————————————— */
+  const [logoCats, setLogoCats] = useState([]);
+  const [loadingLogoCats, setLoadingLogoCats] = useState(true);
+  const [newLogoName, setNewLogoName] = useState('');
+  const [newLogoCover, setNewLogoCover] = useState(null);
+  const [newLogoCoverPreview, setNewLogoCoverPreview] = useState('');
+  const [creatingLogo, setCreatingLogo] = useState(false);
+  const [editLogoId, setEditLogoId] = useState(null);
+  const [editLogoName, setEditLogoName] = useState('');
+  const [editLogoCover, setEditLogoCover] = useState(null);
+  const [editLogoCoverPreview, setEditLogoCoverPreview] = useState('');
+  const [savingLogo, setSavingLogo] = useState(false);
+
+  /* ————————————————— بيانات رفع الشعارات ————————————————— */
+  const [logoFiles, setLogoFiles] = useState([]);
+  const [logoPreviews, setLogoPreviews] = useState([]);
+  const [logoCatForUpload, setLogoCatForUpload] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoImgs, setLogoImgs] = useState([]);
+  const [loadingLogoImgs, setLoadingLogoImgs] = useState(true);
+  const [logoSelectMode, setLogoSelectMode] = useState(false);
+  const [selectedLogos, setSelectedLogos] = useState(new Set());
+  const [showLogoModal, setShowLogoModal] = useState(false);
+  const [deleteLogoIds, setDeleteLogoIds] = useState(new Set());
+  const logoInputRef = useRef();
 
   /* ————————————————— جلب الأقسام والصور ————————————————— */
   const fetchCats = async () => {
@@ -78,14 +141,54 @@ export default function Dashboard() {
     }
   };
 
+  const fetchLogoCats = async () => {
+    setLoadingLogoCats(true);
+    try {
+      const res = await fetch('/api/logo-categories');
+      const data = await res.json();
+      setLogoCats(data);
+      if (data.length && !logoCatForUpload) {
+        setLogoCatForUpload(String(data[0].id));
+      }
+    } catch {
+      setLogoCats([]);
+    } finally {
+      setLoadingLogoCats(false);
+    }
+  };
+
+  const fetchLogoImgs = async () => {
+    if (!logoCatForUpload) return setLogoImgs([]);
+    setLoadingLogoImgs(true);
+    try {
+      const res = await fetch(`/api/logo-categories/${logoCatForUpload}/images`);
+      const data = await res.json();
+      setLogoImgs(Array.isArray(data) ? data : []);
+    } catch {
+      setLogoImgs([]);
+    } finally {
+      setLoadingLogoImgs(false);
+      setSelectedLogos(new Set());
+      setLogoSelectMode(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchCats();
   }, []);
 
   useEffect(() => {
+    fetchLogoCats();
+  }, []);
+
+  useEffect(() => {
     fetchImgs();
   }, [categoryForUpload]);
+
+  useEffect(() => {
+    fetchLogoImgs();
+  }, [logoCatForUpload]);
 
   /* ————————————————— دوال الأقسام ————————————————— */
   const handleNewCover = e => {
@@ -225,12 +328,168 @@ export default function Dashboard() {
     fetchImgs();
   };
 
+  // ======== دوال الشعارات ========
+  const handleNewLogoCover = e => {
+    const f = e.target.files[0];
+    setNewLogoCover(f);
+    setNewLogoCoverPreview(URL.createObjectURL(f));
+  };
+
+  const createLogoCat = async () => {
+    if (!newLogoName.trim()) return setStatus('❗ أدخل اسم القسم');
+    setCreatingLogo(true);
+    try {
+      const fm = new FormData();
+      fm.append('name', newLogoName.trim());
+      if (newLogoCover) fm.append('cover', newLogoCover);
+      await fetch('/api/logo-categories', { method: 'POST', body: fm });
+      setStatus('✅ تم إنشاء القسم');
+      setNewLogoName('');
+      setNewLogoCover(null);
+      setNewLogoCoverPreview('');
+      fetchLogoCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الإنشاء');
+    } finally {
+      setCreatingLogo(false);
+    }
+  };
+
+  const startLogoEdit = c => {
+    setEditLogoId(c.id);
+    setEditLogoName(c.name);
+    setEditLogoCoverPreview(c.cover);
+  };
+
+  const handleEditLogoCover = e => {
+    const f = e.target.files[0];
+    setEditLogoCover(f);
+    setEditLogoCoverPreview(URL.createObjectURL(f));
+  };
+
+  const saveLogoEdit = async () => {
+    if (!editLogoName.trim()) return setStatus('❗ أدخل اسم القسم');
+    setSavingLogo(true);
+    try {
+      const fm = new FormData();
+      fm.append('name', editLogoName.trim());
+      if (editLogoCover) fm.append('cover', editLogoCover);
+      await fetch(`/api/logo-categories/${editLogoId}`, { method: 'PUT', body: fm });
+      setStatus('✅ تم حفظ التعديل');
+      setEditLogoId(null);
+      fetchLogoCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الحفظ');
+    } finally {
+      setSavingLogo(false);
+    }
+  };
+
+  const cancelLogoEdit = () => {
+    setEditLogoId(null);
+    setEditLogoName('');
+    setEditLogoCover(null);
+    setEditLogoCoverPreview('');
+  };
+
+  const deleteLogoCat = async id => {
+    if (!confirm('تأكيد حذف القسم؟')) return;
+    try {
+      await fetch(`/api/logo-categories/${id}`, { method: 'DELETE' });
+      setStatus('🗑️ تم حذف القسم');
+      fetchLogoCats();
+    } catch {
+      setStatus('❌ خطأ أثناء الحذف');
+    }
+  };
+
+  const handleLogoSelect = e => {
+    const arr = Array.from(e.target.files);
+    setLogoFiles(arr);
+    setLogoPreviews(arr.map(f => URL.createObjectURL(f)));
+  };
+
+  const uploadLogoFiles = async () => {
+    if (!logoFiles.length) return setStatus('❗ اختر صورة');
+    if (!logoCatForUpload) return setStatus('❗ اختر القسم');
+    setUploadingLogo(true);
+    try {
+      for (let f of logoFiles) {
+        const fm = new FormData();
+        fm.append('cat', logoCatForUpload);
+        fm.append('file', f);
+        await fetch(`/api/logo-categories/${logoCatForUpload}/images`, {
+          method: 'POST',
+          body: fm
+        });
+      }
+      setStatus('✅ تم رفع الصور');
+      setLogoFiles([]);
+      setLogoPreviews([]);
+      logoInputRef.current.value = null;
+      fetchLogoImgs();
+    } catch {
+      setStatus('❌ خطأ أثناء الرفع');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const toggleLogoSel = id => {
+    const s = new Set(selectedLogos);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setSelectedLogos(s);
+  };
+
+  const selectAllLogos = () => {
+    if (selectedLogos.size === logoImgs.length) {
+      setSelectedLogos(new Set());
+    } else {
+      setSelectedLogos(new Set(logoImgs.map(i => i.id)));
+    }
+    setLogoSelectMode(true);
+  };
+
+  const confirmLogoDel = ids => {
+    setDeleteLogoIds(new Set(ids));
+    setShowLogoModal(true);
+  };
+
+  const doLogoDelete = async () => {
+    for (let id of deleteLogoIds) {
+      await fetch(`/api/logo-images?id=${id}`, { method: 'DELETE' });
+    }
+    setStatus(`🗑️ حذف ${deleteLogoIds.size}`);
+    setShowLogoModal(false);
+    fetchLogoImgs();
+  };
+
   /* ————————————————— JSX ————————————————— */
+  if (!authorized) {
+    return (
+      <div dir="rtl" className="min-h-screen flex items-center justify-center bg-[#121212] text-gray-100 font-[Beiruti]">
+        <GlobalCSS />
+        <div className="bg-[#1f1f1f] p-6 rounded-xl shadow-xl space-y-4 w-80">
+          <h1 className="text-center text-2xl font-bold">دخول</h1>
+          <input
+            type="password"
+            value={pw}
+            onChange={e => setPw(e.target.value)}
+            className="w-full p-2 rounded-lg bg-gray-800 text-gray-100 focus:outline-none"
+          />
+          {err && <p className="text-red-500 text-sm text-center">{err}</p>}
+          <button onClick={login} className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg">دخول</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="md:flex min-h-screen bg-gray-50 text-gray-900 font-[Beiruti]">
+    <div dir="rtl" className="md:flex min-h-screen bg-[#121212] text-gray-100 font-[Beiruti]">
+      <GlobalCSS />
       {/* ——— القائمة الجانبية ——— */}
       <aside
-        className={`fixed z-20 inset-y-0 right-0 w-64 bg-white p-6 shadow-lg border-l border-gray-200 transform transition-transform md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}
+        className={`fixed z-20 inset-y-0 right-0 w-64 bg-[#1f1f1f] p-6 shadow-lg border-l border-gray-800 transform transition-transform md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">القائمة</h2>
@@ -247,24 +506,52 @@ export default function Dashboard() {
               onClick={() => setActiveSection('categories')}
               className={`w-full text-right px-4 py-2 rounded-lg transition ${
                 activeSection === 'categories'
-                  ? 'bg-black text-white shadow-xl'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-blue-600 text-white shadow-xl'
+                  : 'text-gray-300 hover:bg-gray-800'
               }`}
             >
               أقسام مهاراتي
             </button>
+            <ul className="pr-4 mt-2 space-y-2">
+              <li>
+                <button
+                  onClick={() => setActiveSection('upload')}
+                  className={`w-full text-right px-4 py-2 rounded-lg transition ${
+                    activeSection === 'upload'
+                      ? 'bg-blue-600 text-white shadow-xl'
+                      : 'text-gray-300 hover:bg-gray-800'
+                  }`}
+                >
+                  رفع الصور
+                </button>
+              </li>
+            </ul>
           </li>
           <li>
             <button
-              onClick={() => setActiveSection('upload')}
+              onClick={() => setActiveSection('logoCats')}
               className={`w-full text-right px-4 py-2 rounded-lg transition ${
-                activeSection === 'upload'
-                  ? 'bg-black text-white shadow-xl'
-                  : 'text-gray-700 hover:bg-gray-100'
+                activeSection === 'logoCats'
+                  ? 'bg-blue-600 text-white shadow-xl'
+                  : 'text-gray-300 hover:bg-gray-800'
               }`}
             >
-              رفع الصور
+              أقسام الشعارات
             </button>
+            <ul className="pr-4 mt-2 space-y-2">
+              <li>
+                <button
+                  onClick={() => setActiveSection('logoUpload')}
+                  className={`w-full text-right px-4 py-2 rounded-lg transition ${
+                    activeSection === 'logoUpload'
+                      ? 'bg-blue-600 text-white shadow-xl'
+                      : 'text-gray-300 hover:bg-gray-800'
+                  }`}
+                >
+                  رفع الشعارات
+                </button>
+              </li>
+            </ul>
           </li>
         </ul>
       </aside>
@@ -296,7 +583,7 @@ export default function Dashboard() {
             className="space-y-10"
           >
             {/* إنشاء قسم جديد */}
-            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">إنشاء قسم جديد</h2>
               <div className="flex flex-col md:flex-row gap-4">
                 <input
@@ -304,9 +591,9 @@ export default function Dashboard() {
                   placeholder="اسم القسم"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  className="bg-gray-100 border border-gray-300 rounded-lg p-2 flex-1 text-gray-900 placeholder-gray-500"
+                  className="bg-gray-800 border border-gray-600 rounded-lg p-2 flex-1 text-gray-100 placeholder-gray-400"
                 />
-                <label className="flex items-center gap-2 cursor-pointer text-gray-600">
+                <label className="flex items-center gap-2 cursor-pointer text-gray-400">
                   <FiFile /> غلاف
                   <input type="file" accept="image/*" hidden onChange={handleNewCover} />
                 </label>
@@ -330,7 +617,7 @@ export default function Dashboard() {
             </div>
 
             {/* الأقسام الحالية */}
-            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">الأقسام الحالية</h2>
               {loadingCats ? (
                 <div className="flex gap-4">
@@ -339,13 +626,13 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : categories.length === 0 ? (
-                <p className="text-gray-500">لا توجد أقسام.</p>
+                <p className="text-gray-400">لا توجد أقسام.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {categories.map(c => (
                     <div
                       key={c.id}
-                      className="bg-white border border-gray-300 rounded-2xl p-5 relative shadow-md hover:shadow-lg transition"
+                      className="bg-[#1f1f1f] border border-gray-700 rounded-2xl p-5 relative shadow-md hover:shadow-lg transition"
                     >
                       {editId === c.id ? (
                         <>
@@ -353,9 +640,9 @@ export default function Dashboard() {
                             type="text"
                             value={editName}
                             onChange={e => setEditName(e.target.value)}
-                            className="w-full mb-2 p-2 rounded-lg bg-gray-100 text-gray-900 border border-gray-300"
+                            className="w-full mb-2 p-2 rounded-lg bg-gray-800 text-gray-100 border border-gray-600"
                           />
-                          <label className="flex items-center gap-2 mb-2 cursor-pointer text-gray-600">
+                          <label className="flex items-center gap-2 mb-2 cursor-pointer text-gray-400">
                             <FiFile /> غلاف جديد
                             <input type="file" accept="image/*" hidden onChange={handleEditCover} />
                           </label>
@@ -428,16 +715,16 @@ export default function Dashboard() {
             className="space-y-10"
           >
             {/* رفع جديد */}
-            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
               <h2 className="text-2xl font-semibold">رفع صور</h2>
 
               {/* التحكم في القسم (اختياري للواجهة فقط) */}
               <div className="flex items-center gap-4">
-                <label className="text-gray-700">اختر القسم:</label>
+                <label className="text-gray-300">اختر القسم:</label>
                 <select
                   value={categoryForUpload}
                   onChange={e => setCategoryForUpload(e.target.value)}
-                  className="bg-gray-100 border border-gray-300 rounded-lg p-2 text-gray-900"
+                  className="bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-100"
                 >
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -446,7 +733,7 @@ export default function Dashboard() {
               </div>
 
               <div className="flex items-center gap-4">
-                <label className="flex-1 flex items-center justify-center gap-3 cursor-pointer bg-gray-100 border border-gray-300 rounded-lg py-3 hover:bg-gray-200">
+                <label className="flex-1 flex items-center justify-center gap-3 cursor-pointer bg-gray-800 border border-gray-600 rounded-lg py-3 hover:bg-gray-700">
                   <FiFile /> اختر ملفات
                   <input
                     ref={inputRef}
@@ -484,7 +771,7 @@ export default function Dashboard() {
             </div>
 
             {/* الصور المخزنة */}
-            <div className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold">الصور المخزنة</h2>
                 <div className="flex gap-2">
@@ -554,20 +841,291 @@ export default function Dashboard() {
           </motion.div>
         )}
 
+        {/* ——— قسم أقسام الشعارات ——— */}
+        {activeSection === 'logoCats' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-10"
+          >
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">إنشاء قسم جديد</h2>
+              <div className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="text"
+                  placeholder="اسم القسم"
+                  value={newLogoName}
+                  onChange={e => setNewLogoName(e.target.value)}
+                  className="bg-gray-800 border border-gray-600 rounded-lg p-2 flex-1 text-gray-100 placeholder-gray-400"
+                />
+                <label className="flex items-center gap-2 cursor-pointer text-gray-400">
+                  <FiFile /> غلاف
+                  <input type="file" accept="image/*" hidden onChange={handleNewLogoCover} />
+                </label>
+                <button
+                  onClick={createLogoCat}
+                  disabled={creatingLogo}
+                  className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg shadow"
+                >
+                  <FiPlus className="inline-block" /> إنشاء
+                </button>
+              </div>
+              {newLogoCoverPreview && (
+                <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                  <img
+                    src={newLogoCoverPreview}
+                    alt="cover preview"
+                    className="absolute inset-0 w-full h-full object-cover rounded-lg shadow-inner"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">الأقسام الحالية</h2>
+              {loadingLogoCats ? (
+                <div className="flex gap-4">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="w-32 h-32 bg-gray-200 animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : logoCats.length === 0 ? (
+                <p className="text-gray-400">لا توجد أقسام.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {logoCats.map(c => (
+                    <div
+                      key={c.id}
+                      className="bg-[#1f1f1f] border border-gray-700 rounded-2xl p-5 relative shadow-md hover:shadow-lg transition"
+                    >
+                      {editLogoId === c.id ? (
+                        <>
+                          <input
+                            type="text"
+                            value={editLogoName}
+                            onChange={e => setEditLogoName(e.target.value)}
+                            className="w-full mb-2 p-2 rounded-lg bg-gray-800 text-gray-100 border border-gray-600"
+                          />
+                          <label className="flex items-center gap-2 mb-2 cursor-pointer text-gray-400">
+                            <FiFile /> غلاف جديد
+                            <input type="file" accept="image/*" hidden onChange={handleEditLogoCover} />
+                          </label>
+                          {editLogoCoverPreview && (
+                            <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                              <img
+                                src={editLogoCoverPreview}
+                                alt="edit cover preview"
+                                className="absolute inset-0 w-full h-full object-cover rounded-lg mb-2"
+                              />
+                            </div>
+                          )}
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={saveLogoEdit}
+                              disabled={savingLogo}
+                              className="px-3 py-1 bg-black hover:bg-gray-800 rounded-lg text-white"
+                            >
+                              حفظ
+                            </button>
+                            <button
+                              onClick={cancelLogoEdit}
+                              className="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded-lg text-white"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {c.cover && (
+                            <div className="w-full relative" style={{ paddingTop: '100%' }}>
+                              <img
+                                src={c.cover}
+                                alt={c.name}
+                                className="absolute inset-0 w-full h-full object-cover rounded-lg mb-3 border-2 border-gray-700"
+                              />
+                            </div>
+                          )}
+                          <p className="font-medium mb-4 text-gray-800">{c.name}</p>
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => startLogoEdit(c)}
+                              className="p-2 bg-black hover:bg-gray-800 rounded-lg text-white"
+                            >
+                              <FiEdit />
+                            </button>
+                            <button
+                              onClick={() => deleteLogoCat(c.id)}
+                              className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ——— قسم رفع الشعارات ——— */}
+        {activeSection === 'logoUpload' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-10"
+          >
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <h2 className="text-2xl font-semibold">رفع شعارات</h2>
+              <div className="flex items-center gap-4">
+                <label className="text-gray-300">اختر القسم:</label>
+                <select
+                  value={logoCatForUpload}
+                  onChange={e => setLogoCatForUpload(e.target.value)}
+                  className="bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-100"
+                >
+                  {logoCats.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex-1 flex items-center justify-center gap-3 cursor-pointer bg-gray-800 border border-gray-600 rounded-lg py-3 hover:bg-gray-700">
+                  <FiFile /> اختر ملفات
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    hidden
+                    multiple
+                    accept="image/*"
+                    onChange={handleLogoSelect}
+                  />
+                </label>
+                <button
+                  onClick={uploadLogoFiles}
+                  disabled={uploadingLogo || !logoFiles.length}
+                  className="w-16 h-16 bg-black hover:bg-gray-800 text-white rounded-lg flex items-center justify-center"
+                >
+                  {uploadingLogo ? <FiLoader className="animate-spin" /> : <FiUpload size={24} />}
+                </button>
+              </div>
+              {logoPreviews.length > 0 && (
+                <div className="grid grid-cols-3 gap-4">
+                  {logoPreviews.map((p, i) => (
+                    <div key={i} className="w-full relative" style={{ paddingTop: '100%' }}>
+                      <img src={p} alt={`preview-${i}`} className="absolute inset-0 w-full h-full object-cover rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="bg-[#1f1f1f] rounded-2xl p-6 space-y-4 shadow-xl">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold">الشعارات المخزنة</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setLogoSelectMode(!logoSelectMode)}
+                    className="px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg"
+                  >
+                    {logoSelectMode ? 'إلغاء التحديد' : 'تحديد'}
+                  </button>
+                  {logoSelectMode && logoImgs.length > 0 && (
+                    <button
+                      onClick={selectAllLogos}
+                      className="px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg"
+                    >
+                      {selectedLogos.size === logoImgs.length ? 'إلغاء الكل' : 'تحديد الكل'}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {loadingLogoImgs ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-32 bg-gray-200 animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : logoImgs.length === 0 ? (
+                <p className="text-gray-400">لا توجد صور.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {logoImgs.map(img => (
+                    <div key={img.id} className="relative group w-full" style={{ paddingTop: '100%' }}>
+                      <img
+                        src={img.src}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover rounded-lg transition-transform transform group-hover:scale-105"
+                      />
+                      {logoSelectMode ? (
+                        <button
+                          onClick={() => toggleLogoSel(img.id)}
+                          className="absolute top-2 left-2 text-white bg-black p-1 rounded-full"
+                        >
+                          {selectedLogos.has(img.id) ? <FiCheckSquare /> : <FiSquare />}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => confirmLogoDel([img.id])}
+                          className="absolute top-2 right-2 bg-gray-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"
+                        >
+                          <FiTrash2 />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {logoSelectMode && selectedLogos.size > 0 && (
+                <button
+                  onClick={() => confirmLogoDel(Array.from(selectedLogos))}
+                  className="mt-4 px-5 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                >
+                  حذف المحدد ({selectedLogos.size})
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* ——— نافذة تأكيد الحذف ——— */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-2xl shadow-2xl w-80 text-right space-y-4">
-              <p className="text-gray-700">هل أنت متأكد من حذف الصور المحددة؟</p>
+            <div className="bg-[#1f1f1f] p-6 rounded-2xl shadow-2xl w-80 text-right space-y-4">
+              <p className="text-gray-300">هل أنت متأكد من حذف الصور المحددة؟</p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"
+                  className="px-4 py-2 border border-gray-600 rounded-lg text-gray-300"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={doDelete}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                >
+                  حذف
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showLogoModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+            <div className="bg-[#1f1f1f] p-6 rounded-2xl shadow-2xl w-80 text-right space-y-4">
+              <p className="text-gray-300">هل أنت متأكد من حذف الصور المحددة؟</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowLogoModal(false)}
+                  className="px-4 py-2 border border-gray-600 rounded-lg text-gray-300"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={doLogoDelete}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
                 >
                   حذف

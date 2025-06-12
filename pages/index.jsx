@@ -133,14 +133,17 @@ function Section({ title, items = [], loading }) {
 // — Main Component —
 export default function Home() {
   const [skills,setSkills]=useState([]);
-  const [logos,setLogos]=useState([]);
+  const [logos,setLogos]=useState([]); // logo categories
   const [ldS,setLdS]=useState(true);
   const [ldL,setLdL]=useState(true);
   const [menuOpen,setMenuOpen]=useState(false);
 
   useEffect(()=>{
     fetch('/api/categories').then(r=>r.json()).then(d=>setSkills(Array.isArray(d)?d.map(c=>({id:c.id,src:c.cover,name:c.name,link:`/gallery/${c.id}`})):[])).finally(()=>setLdS(false));
-    fetch('/api/images').then(r=>r.json()).then(d=>setLogos(Array.isArray(d)?d:[])).finally(()=>setLdL(false));
+    fetch('/api/logo-categories')
+      .then(r=>r.json())
+      .then(d=>setLogos(Array.isArray(d)?d.map(c=>({id:c.id,src:c.cover,name:c.name,link:`/logos/${c.id}`})):[]))
+      .finally(()=>setLdL(false));
   },[]);
 
   return (
