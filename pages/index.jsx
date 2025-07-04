@@ -9,10 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 /* — Global Dark Styles — */
 const GlobalCSS = () => (
   <Head>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
+       @import url('https://fonts.googleapis.com/css2?family=Beiruti:wght@400;700&display=swap');
     <style
       dangerouslySetInnerHTML={{
         __html: `
@@ -120,7 +117,7 @@ function Slider({ slider, thin = false }) {
 
   const wrapperClasses = thin
     ? 'w-full h-24 rounded-lg overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900 relative'
-    : 'w-full h-80 rounded-lg overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900 relative';
+    : 'w-full h-[32rem] rounded-lg overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900 relative';
 
   return (
     <div className="relative w-full">

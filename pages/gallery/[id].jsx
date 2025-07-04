@@ -9,10 +9,7 @@ import { FiArrowRight } from "react-icons/fi";
 /* ——— Global Styles ——— */
 const GlobalCSS = () => (
   <Head>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
+       @import url('https://fonts.googleapis.com/css2?family=Beiruti:wght@400;700&display=swap');
     <style
       dangerouslySetInnerHTML={{
         __html: `

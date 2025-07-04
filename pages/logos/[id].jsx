@@ -1,3 +1,4 @@
+// File: components/Gallery.jsx
 "use client";
 import React, { useEffect, useState } from "react";
 import Head from "next/head";
@@ -36,7 +37,7 @@ const Header = ({ title }) => (
     transition={{ duration: 0.6, ease: "easeOut" }}
     className="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-black/90 via-gray-900/90 to-black/90 backdrop-blur-xl px-6 py-5 flex items-center justify-between shadow-2xl border-b border-white/10"
   >
-    <motion.h1 
+    <motion.h1
       className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -103,26 +104,18 @@ export default function Gallery() {
   /* ——— Motion variants ——— */
   const container = {
     hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1, 
-      transition: { 
-        staggerChildren: 0.05,
-        delayChildren: 0.1
-      } 
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05, delayChildren: 0.1 },
     },
   };
-  
   const item = {
     hidden: { opacity: 0, y: 30, scale: 0.9 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
+    visible: {
+      opacity: 1,
+      y: 0,
       scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 15
-      }
+      transition: { type: "spring", stiffness: 100, damping: 15 },
     },
   };
 
@@ -134,21 +127,27 @@ export default function Gallery() {
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-3/4 left-3/4 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: '1s' }}
+        />
+        <div
+          className="absolute top-3/4 left-3/4 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: '2s' }}
+        />
       </div>
 
       <main className="relative z-10 pt-32 pb-20 px-6 sm:px-10 lg:px-16">
         {loading && (
-          <div className="columns-2 gap-8 space-y-8">
+          <div className="columns-2 sm:columns-3 lg:columns-4 gap-x-4 gap-y-8">
             {Array.from({ length: 8 }).map((_, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.1 }}
-                className={`${skel} break-inside-avoid mb-8`}
-                style={{ height: `${Math.random() * 300 + 200}px` }}
+                className={`${skel} break-inside-avoid mb-8`} 
+                style={{ height: `${Math.random() * 200 + 150}px` }}
               />
             ))}
           </div>
@@ -159,7 +158,7 @@ export default function Gallery() {
             variants={container}
             initial="hidden"
             animate="visible"
-            className="columns-2 gap-8 space-y-8"
+            className="columns-2 sm:columns-3 lg:columns-4 gap-x-4 gap-y-8"
           >
             {images.map((img, i) => (
               <motion.div
@@ -167,12 +166,9 @@ export default function Gallery() {
                 variants={item}
                 className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-800/30 to-gray-900/30 border border-gray-700/30 backdrop-blur-sm break-inside-avoid mb-8"
               >
-                {/* Shimmer overlay for loading */}
                 {!loaded[i] && (
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[shimmer_2s_ease-in-out_infinite] rounded-2xl" />
                 )}
-                
-                {/* Image container */}
                 <div className="relative overflow-hidden rounded-2xl">
                   <motion.img
                     src={low(img.src)}
@@ -181,8 +177,8 @@ export default function Gallery() {
                     onLoad={() => markLoaded(i)}
                     className="w-full h-auto"
                     style={{
-                      filter: loaded[i] 
-                        ? "blur(0) brightness(1) contrast(1.05)" 
+                      filter: loaded[i]
+                        ? "blur(0) brightness(1) contrast(1.05)"
                         : "blur(20px) brightness(0.8)",
                     }}
                     loading="lazy"
